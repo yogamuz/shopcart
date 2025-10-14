@@ -52,7 +52,7 @@
 <script setup>
 import { ref, onMounted, nextTick, computed, watch } from "vue";
 import { useRouter } from "vue-router";
-import weeklyProductsData from "@/data/weeklyProducts.json";
+import weeklyProductsData from "@/data/weeklyproducts.json";
 
 // Komponen
 import MiniCart from "@/components/Cart/MiniCart.vue";
