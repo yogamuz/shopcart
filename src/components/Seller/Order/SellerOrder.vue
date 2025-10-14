@@ -68,12 +68,12 @@ import { ref, computed, watch } from "vue";
 import { useSellerOrders } from "@/composables/useSellerOrders";
 import { useSellerCancelRequests } from "@/composables/useCancelRequests";
 
-import MetricCards from "@/components/seller/Order/MetricCards.vue";
-import ControlPanel from "@/components/seller/Order/ControlPanel.vue";
-import OrdersTable from "@/components/seller/Order/OrdersTable.vue";
-import OrderModal from "@/components/seller/Order/OrderModal.vue";
-import CancelRequestModal from "@/components/seller/Order/CancelRequestModal.vue";
-import ShipOrderModal from "@/components/seller/Order/ShipOrderModal.vue";
+import MetricCards from "@/components/Seller/Order/MetricCards.vue";
+import ControlPanel from "@/components/Seller/Order/ControlPanel.vue";
+import OrdersTable from "@/components/Seller/Order/OrdersTable.vue";
+import OrderModal from "@/components/Seller/Order/OrderModal.vue";
+import CancelRequestModal from "@/components/Seller/Order/CancelRequestModal.vue";
+import ShipOrderModal from "@/components/Seller/Order/ShipOrderModal.vue";
 
 // Use seller orders composable
 const {
