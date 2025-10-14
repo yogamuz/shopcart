@@ -151,7 +151,7 @@ import { useRoute, useRouter } from "vue-router";
 import Navbar from "@/components/Layout/Navbar/Navbar.vue";
 import Header from "@/components/Layout/Header.vue";
 import Footer from "@/components/Layout/Footer.vue";
-import Loading from "@/components/common/Loading.vue";
+import Loading from "@/components/Common/Loading.vue";
 
 // ProductDetail Sub-Components
 import FlyingImageAnimation from "@/components/ProductDetail/FlyingImageAnimation.vue";
