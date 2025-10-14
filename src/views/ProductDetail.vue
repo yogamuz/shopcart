@@ -155,7 +155,7 @@ import Loading from "@/components/Common/Loading.vue";
 
 // ProductDetail Sub-Components
 import FlyingImageAnimation from "@/components/ProductDetail/FlyingImageAnimation.vue";
-import ProductBreadcrumb from "@/components/ProductDetail/ProductBreadcrumb.vue";
+import ProductBreadcrumb from "@/components/ProductDetail/ProductBreadCrumb.vue";
 import ProductImageSection from "@/components/ProductDetail/ProductImageSection.vue";
 import ProductInfoSection from "@/components/ProductDetail/ProductInfoSection.vue";
 import RelatedProducts from "@/components/ProductDetail/RelatedProducts.vue";
