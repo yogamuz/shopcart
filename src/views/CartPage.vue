@@ -100,11 +100,11 @@ import { ref, computed, onMounted, watch, nextTick, provide } from "vue";
 import { debounce } from "lodash";
 import { useRouter } from "vue-router";
 import { useCartStore } from "@/stores/cartStore.js";
-import CartHeader from "@/components/cart/CartHeader.vue";
-import CartEmptyState from "@/components/cart/CartEmptyState.vue";
-import CartItem from "@/components/cart/CartItem.vue";
-import CartSummary from "@/components/cart/CartSummary.vue";
-import CartConfirmModal from "@/components/cart/CartConfirmModal.vue";
+import CartHeader from "@/components/Cart/CartHeader.vue";
+import CartEmptyState from "@/components/Cart/CartEmptyState.vue";
+import CartItem from "@/components/Cart/CartItem.vue";
+import CartSummary from "@/components/Cart/CartSummary.vue";
+import CartConfirmModal from "@/components/Cart/CartConfirmModal.vue";
 
 const router = useRouter();
 const cartStore = useCartStore();
