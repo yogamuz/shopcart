@@ -80,13 +80,13 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from "vue";
-import Sidebar from "@/components/seller/Sidebar.vue";
-import Header from "@/components/seller/Order/Header.vue";
-import SellerOrder from "@/components/seller/Order/SellerOrder.vue";
-import SellerProduct from "@/components/seller/Product/SellerProduct.vue";
-import SellerWallet from "@/components/seller/SellerWallet.vue";
-import SellerProfile from "@/components/seller/Profile/SellerProfile.vue";
-import SellerDashboardOverview from "@/components/seller/Dashboard/SellerDashboardOverview.vue";
+import Sidebar from "@/components/Seller/Sidebar.vue";
+import Header from "@/components/Seller/Order/Header.vue";
+import SellerOrder from "@/components/Seller/Order/SellerOrder.vue";
+import SellerProduct from "@/components/Seller/Product/SellerProduct.vue";
+import SellerWallet from "@/components/Seller/SellerWallet.vue";
+import SellerProfile from "@/components/Seller/Profile/SellerProfile.vue";
+import SellerDashboardOverview from "@/components/Seller/Dashboard/SellerDashboardOverview.vue";
 import SellerAnalytics from "@/components/Seller/SellerAnalytics.vue"
 import { useSellerProfile } from "@/composables/useSellerProfile";
 

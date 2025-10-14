@@ -359,7 +359,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useUserQueries } from "@/composables/useUserQueries";
 import { useWallet } from "@/composables/useWallet";
 import { useOrderStore } from "@/stores/orderStore";
-import BecomeSellerModal from "@/components/user/BecomeSellerModal.vue";
+import BecomeSellerModal from "@/components/User/BecomeSellerModal.vue";
 
 const emit = defineEmits(["navigate-to"]);
 

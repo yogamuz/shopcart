@@ -44,12 +44,12 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import AdminSidebar from "@/components/admin/AdminSidebar.vue";
-import Header from "@/components/user/UserDashboardHeader.vue";
-import AdminUsers from "@/components/admin/AdminUsers.vue";
+import AdminSidebar from "@/components/Admin/AdminSidebar.vue";
+import Header from "@/components/User/UserDashboardHeader.vue";
+import AdminUsers from "@/components/Admin/AdminUsers.vue";
 import AdminCache from "@/components/Admin/AdminCache.vue";
-import AdminWallet from "@/components/admin/AdminWallet.vue";
-import UserSettings from "@/components/user/UserSettings.vue";
+import AdminWallet from "@/components/Admin/AdminWallet.vue";
+import UserSettings from "@/components/User/UserSettings.vue";
 
 // Reactive state with responsive detection
 const sidebarCollapsed = ref(false);

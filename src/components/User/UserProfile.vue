@@ -352,8 +352,8 @@ import { useUserProfileStore } from "@/stores/userProfileStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useUserQueries } from "@/composables/useUserQueries";
 import { Home, Building2, MapPin, Upload } from "lucide-vue-next";
-import ConfirmModalProfile from "@/components/user/ConfirmModalProfile.vue";
-import AvatarCropModal from "@/components/user/AvatarCropModal.vue";
+import ConfirmModalProfile from "@/components/User/ConfirmModalProfile.vue";
+import AvatarCropModal from "@/components/User/AvatarCropModal.vue";
 
 // Stores & Composables
 const userProfileStore = useUserProfileStore();

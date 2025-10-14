@@ -50,13 +50,13 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import Sidebar from "@/components/user/Sidebar.vue";
-import Header from "@/components/user/UserDashboardHeader.vue";
-import UserDashboardOverview from "@/components/user/UserDashboardOverview.vue";
-import UserProfile from "@/components/user/UserProfile.vue";
-import UserAddresses from "@/components/user/UserAddresses.vue";
-import UserWallet from "@/components/user/UserWallet.vue";
-import UserSettings from "@/components/user/UserSettings.vue";
+import Sidebar from "@/components/User/Sidebar.vue";
+import Header from "@/components/User/UserDashboardHeader.vue";
+import UserDashboardOverview from "@/components/User/UserDashboardOverview.vue";
+import UserProfile from "@/components/User/UserProfile.vue";
+import UserAddresses from "@/components/User/UserAddresses.vue";
+import UserWallet from "@/components/User/UserWallet.vue";
+import UserSettings from "@/components/User/UserSettings.vue";
 
 // Reactive state with responsive detection
 const sidebarCollapsed = ref(false);

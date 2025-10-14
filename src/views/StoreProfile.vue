@@ -399,7 +399,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { productService } from "@/services/productService";
-import ProductGrid from "@/components/product/ProductGrid.vue";
+import ProductGrid from "@/components/Product/ProductGrid.vue";
 import {
   Phone,
   Instagram,

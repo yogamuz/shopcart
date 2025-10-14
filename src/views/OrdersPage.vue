@@ -90,14 +90,14 @@ import { useAuthStore } from "@/stores/authStore";
 import { useWallet } from "@/composables/useWallet";
 
 // Import components
-import CheckoutHeader from "@/components/order/CheckoutHeader.vue";
-import CheckoutForm from "@/components/order/CheckoutForm.vue";
-import OrdersHeader from "@/components/order/OrdersHeader.vue";
-import OrdersContent from "@/components/order/OrdersContent.vue";
-import OrderDetailModal from "@/components/order/OrdersDetailModal.vue";
-import PaymentPinModal from "@/components/order/PaymentPinModal.vue";
-import ConfirmationModal from "@/components/order/ConfirmationModal.vue";
-import CancelReasonModal from "../components/Order/CancelReasonModal.vue";
+import CheckoutHeader from "@/components/Order/CheckoutHeader.vue";
+import CheckoutForm from "@/components/Order/CheckoutForm.vue";
+import OrdersHeader from "@/components/Order/OrdersHeader.vue";
+import OrdersContent from "@/components/Order/OrdersContent.vue";
+import OrderDetailModal from "@/components/Order/OrdersDetailModal.vue";
+import PaymentPinModal from "@/components/Order/PaymentPinModal.vue";
+import ConfirmationModal from "@/components/Order/ConfirmationModal.vue";
+import CancelReasonModal from "@/components/Order/CancelReasonModal.vue";
 
 const props = defineProps({
   orderId: String,
