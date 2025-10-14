@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "names": "Furniture",
+    "slug": "furniture",
+    "stock": 245,
+    "bgColor": "bg-orange-500",
+    "imagesIcon": "🪑"
+  },
+  {
+    "id": 2,
+    "names": "Gadgets",
+    "slug": "gadgets",
+    "stock": 89,
+    "bgColor": "bg-blue-500",
+    "imagesIcon": "💻"
+  },
+  {
+    "id": 3,
+    "names": "Sneakers",
+    "slug": "sneakers",
+    "stock": 156,
+    "bgColor": "bg-yellow-500",
+    "imagesIcon": "👟"
+  },
+  {
+    "id": 4,
+    "names": "Fashion",
+    "slug": "fashion",
+    "stock": 324,
+    "bgColor": "bg-pink-500",
+    "imagesIcon": "👗"
+  },
+  {
+    "id": 5,
+    "names": "Toys",
+    "slug": "toys",
+    "stock": 78,
+    "bgColor": "bg-purple-500",
+    "imagesIcon": "🧸"
+  },
+  {
+    "id": 6,
+    "names": "Beauty",
+    "slug": "beauty",
+    "stock": 198,
+    "bgColor": "bg-rose-400",
+    "imagesIcon": "💄"
+  }
+]

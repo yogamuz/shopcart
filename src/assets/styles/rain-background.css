@@ -1,0 +1,144 @@
+/* rain-background.css - Reusable Rain Effect */
+/* From Uiverse.io by SelfMadeSystem */
+
+.rain-container {
+  background-image: radial-gradient(4px 100px at 0px 103px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 103px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 51.5px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 142px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 142px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 71px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 253px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 253px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 126.5px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 228px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 228px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 114px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 223px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 223px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 111.5px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 243px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 243px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 121.5px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 184px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 184px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 92px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 287px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 287px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 143.5px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 284px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 284px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 142px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 210px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 210px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 105px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 138px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 138px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 69px, #0ff 100%, #0000 150%),
+    radial-gradient(4px 100px at 0px 281px, #0ff, #0000),
+    radial-gradient(4px 100px at 300px 281px, #0ff, #0000),
+    radial-gradient(1.5px 1.5px at 150px 140.5px, #0ff 100%, #0000 150%);
+  background-size: 300px 103px, 300px 103px, 300px 103px, 300px 142px,
+    300px 142px, 300px 142px, 300px 253px, 300px 253px, 300px 253px, 300px 228px,
+    300px 228px, 300px 228px, 300px 223px, 300px 223px, 300px 223px, 300px 243px,
+    300px 243px, 300px 243px, 300px 184px, 300px 184px, 300px 184px, 300px 287px,
+    300px 287px, 300px 287px, 300px 284px, 300px 284px, 300px 284px, 300px 210px,
+    300px 210px, 300px 210px, 300px 138px, 300px 138px, 300px 138px, 300px 281px,
+    300px 281px, 300px 281px;
+  animation: rain-f6289b0a 150s linear infinite;
+}
+
+@keyframes rain-f6289b0a {
+  0% {
+    background-position: 0px 15px, 3px 15px, 151.5px 66.5px, 25px 93px,
+      28px 93px, 176.5px 164px, 50px 165px, 53px 165px, 201.5px 291.5px,
+      75px 40px, 78px 40px, 226.5px 154px, 100px 18px, 103px 18px,
+      251.5px 129.5px, 125px 173px, 128px 173px, 276.5px 294.5px, 150px 150px,
+      153px 150px, 301.5px 242px, 175px 15px, 178px 15px, 326.5px 158.5px,
+      200px 221px, 203px 221px, 351.5px 363px, 225px 63px, 228px 63px,
+      376.5px 168px, 250px 130px, 253px 130px, 401.5px 199px, 275px 93px,
+      278px 93px, 426.5px 233.5px;
+  }
+  to {
+    background-position: 0px 3620px, 3px 3620px, 151.5px 3671.5px, 25px 8897px,
+      28px 8897px, 176.5px 8968px, 50px 12309px, 53px 12309px, 201.5px 12435.5px,
+      75px 13492px, 78px 13492px, 226.5px 13606px, 100px 6485px, 103px 6485px,
+      251.5px 6596.5px, 125px 15482px, 128px 15482px, 276.5px 15603.5px,
+      150px 12846px, 153px 12846px, 301.5px 12938px, 175px 19531px,
+      178px 19531px, 326.5px 19674.5px, 200px 7889px, 203px 7889px,
+      351.5px 8031px, 225px 14553px, 228px 14553px, 376.5px 14658px,
+      250px 7858px, 253px 7858px, 401.5px 7927px, 275px 14986px, 278px 14986px,
+      426.5px 15126.5px;
+  }
+}
+
+.rain-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: radial-gradient(
+    ellipse 1.5px 2px at 1.5px 50%,
+    #0000 0,
+    #0000 90%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  background-size: 25px 8px;
+  pointer-events: none;
+}
+
+@keyframes rain-fall {
+  0% {
+    background-position: 0px 220px, 3px 220px, 151.5px 337.5px, 25px 24px,
+      28px 24px, 176.5px 150px, 50px 16px, 53px 16px, 201.5px 91px, 75px 224px,
+      78px 224px, 226.5px 350.5px, 100px 19px, 103px 19px, 251.5px 121px,
+      125px 120px, 128px 120px, 276.5px 187px, 150px 31px, 153px 31px,
+      301.5px 120.5px, 175px 235px, 178px 235px, 326.5px 384.5px, 200px 121px,
+      203px 121px, 351.5px 228.5px, 225px 224px, 228px 224px, 376.5px 364.5px,
+      250px 26px, 253px 26px, 401.5px 105px, 275px 75px, 278px 75px,
+      426.5px 180px;
+  }
+
+  to {
+    background-position: 0px 6800px, 3px 6800px, 151.5px 6917.5px, 25px 13632px,
+      28px 13632px, 176.5px 13758px, 50px 5416px, 53px 5416px, 201.5px 5491px,
+      75px 17175px, 78px 17175px, 226.5px 17301.5px, 100px 5119px, 103px 5119px,
+      251.5px 5221px, 125px 8428px, 128px 8428px, 276.5px 8495px, 150px 9876px,
+      153px 9876px, 301.5px 9965.5px, 175px 13391px, 178px 13391px,
+      326.5px 13540.5px, 200px 14741px, 203px 14741px, 351.5px 14848.5px,
+      225px 18770px, 228px 18770px, 376.5px 18910.5px, 250px 5082px,
+      253px 5082px, 401.5px 5161px, 275px 6375px, 278px 6375px, 426.5px 6480px;
+  }
+}
+
+/* Color variants */
+.rain-blue {
+  --rain-color: #3b82f6;
+  background-color: #1e40af;
+}
+/* Add this to your rain-background.css file */
+
+.rain-cyan {
+  --rain-color: #06b6d4;
+  background-color: #000000; /* Black background */
+}
+
+.rain-black {
+  --rain-color: #3b82f6;
+  background-color: #000000; /* Black background */
+}
+
+.rain-purple {
+  --rain-color: #8b5cf6;
+  background-color: #5b21b6;
+}
+
+.rain-green {
+  --rain-color: #10b981;
+  background-color: #065f46;
+}
+
+.rain-red {
+  --rain-color: #ef4444;
+  background-color: #7f1d1d;
+}

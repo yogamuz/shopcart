@@ -1,0 +1,33 @@
+[
+    {
+        "amount": 100,
+        "text": "Explore Our Furniture & Home Furnishing Range",
+        "image": "../furniture/sofa.png",
+        "priceColor": "#cb9917",
+        "bgColor": "#EFE2D4"
+    },
+    {
+        "amount": 29,
+        "text": "Explore Our Furniture & Home Furnishing Range",
+        "image": "../icons/books2.png",
+        "priceColor": "#961f1f",
+        "bgColor": "#F4D6D6"
+
+    },
+    {
+        "amount": 67,
+        "text": "Explore Our Furniture & Home Furnishing Range",
+        "image": "../fashion/shirts.png",
+        "priceColor": "#94623c",
+        "bgColor": "#F4E9DE"
+
+    },
+    {
+        "amount": 59,
+        "text": "Explore Our Furniture & Home Furnishing Range",
+        "image": "../icons/bag.png",
+        "priceColor": "#004030",
+        "bgColor": "#E4FAF1"
+
+    }
+]

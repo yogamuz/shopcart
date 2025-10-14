@@ -1,0 +1,48 @@
+[
+    {
+        "id": 1,
+        "title": "HomePod Mini",
+        "price": 2400000,
+        "rating": 4,
+        "reviews": 120,
+        "description": "Table with air purifier, stained veneer/black and white ",
+        "image": "../gadgets/homepodmini.png"
+    },
+    {
+        "id": "instax-12345678",
+        "title": "Instax Mini 9",
+        "price": 1100000,
+        "rating": 4.5,
+        "reviews": 85,
+        "description": "Selfie mode and selfie mirror, Macro mode",
+        "image": "../gadgets/instaxmini9.png"
+    },
+    {
+        "id": 2,
+        "title": "Base Camp Duffel M",
+        "price": 2400000,
+        "rating": 5,
+        "reviews": 60,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../fitness/basecampduffelm.png"
+    },
+
+    {
+        "id": 5,
+        "title": "HomePod Mini",
+        "price": 3000000,
+        "rating": 4.8,
+        "reviews": 200,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../gadgets/homepodmini2.png"
+    },
+    {
+        "id": 6,
+        "title": "HomePod Mini",
+        "price": 2400000,
+        "rating": 4.6,
+        "reviews": 150, 
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../gadgets/homepodmini3.png"
+    }
+]

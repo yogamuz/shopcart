@@ -1,0 +1,56 @@
+[
+    {
+        "id": 1,
+        "title": "HomePod Mini",
+        "price": 2400000,
+        "rating": 5,
+        "reviews": 121,
+        "description": "Table with air purifier, stained veneer black and white",
+        "image": "../gadgets/homepodmini2.png"
+    },
+    {
+        "id": 2,
+        "title": "Base Camp Duffel M",
+        "price": 2400000,
+        "rating": 5,
+        "reviews": 60,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../fitness/basecampduffelm.png"
+    },
+    {
+        "id": 3,
+        "title": "Tomford Watch",
+        "price": 500000,
+        "rating": 5,
+        "reviews": 140,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../gadgets/tomford-watch.png"
+    },
+    {
+        "id": 4,
+        "title": "Cabin",
+        "price": 750000,
+        "rating": 5,
+        "reviews": 34,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../fitness/cabin.png"
+    },
+    {
+        "id": 5,
+        "title": "Pendleton Water Bottle",
+        "price": 1250000,
+        "rating": 5,
+        "reviews": 76,
+        "description": "Table with air purifier, stained veneer/black",
+        "image": "../fitness/pendleton-water-bottle.png"
+    },
+    {
+        "id": "instax-12345678",
+        "title": "Instax Mini 9",
+        "price": 1100000,
+        "rating": 4.5,
+        "reviews": 85,
+        "description": "Selfie mode and selfie mirror, Macro mode",
+        "image": "../gadgets/instaxmini9.png"
+    }
+]

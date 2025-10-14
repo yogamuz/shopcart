@@ -1,0 +1,33 @@
+[
+    {
+        "id": 1,
+        "name": "Furniture",
+        "image": "../icons/furniture.png"
+        
+    },
+    {
+        "id": 2,
+        "name": "Handbags",
+        "image": "../icons/handbag.png"
+    },
+    {
+        "id": 3,
+        "name": "Books",
+        "image": "../icons/books.png"
+    },
+    {
+        "id": 4,
+        "name": "Tech",
+        "image": "../icons/tech.png"
+    },
+    {
+        "id": 5,
+        "name": "Sneakers",
+        "image": "../icons/sneakers.png"
+    },
+    {
+        "id": 6,
+        "name": "Travel",
+        "image": "../icons/travel.png"
+    }
+]

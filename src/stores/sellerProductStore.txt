@@ -1,0 +1,442 @@
+// stores/sellerProductStore.js
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { SellerProductService } from '@/services/sellerProductService'
+import { useAuthStore } from '@/stores/authStore' // Assuming you have auth store
+
+export const useSellerProductStore = defineStore('sellerProduct', () => {
+  // State
+  const products = ref([])
+  const currentProduct = ref(null)
+  const pagination = ref({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 12,
+    hasNext: false,
+    hasPrev: false
+  })
+  const appliedFilters = ref({})
+  const storeInfo = ref(null)
+  const isLoading = ref(false)
+  const error = ref(null)
+  const productStats = ref({})
+
+  // Service instance
+  let productService = null
+
+  // Initialize service with auth token
+  const initService = () => {
+    const authStore = useAuthStore()
+    productService = new SellerProductService(authStore.token)
+  }
+
+  // Getters/Computed
+  const totalProducts = computed(() => pagination.value.totalItems)
+  const hasProducts = computed(() => products.value.length > 0)
+  const activeProducts = computed(() => products.value.filter(p => p.isActive))
+  const inactiveProducts = computed(() => products.value.filter(p => !p.isActive))
+  const lowStockProducts = computed(() => products.value.filter(p => p.stock <= 5))
+  
+  // Sort products by different criteria
+  const productsSortedByDate = computed(() => 
+    [...products.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  )
+  
+  const productsSortedByPrice = computed(() => 
+    [...products.value].sort((a, b) => a.price - b.price)
+  )
+
+  // Actions
+  const setLoading = (loading) => {
+    isLoading.value = loading
+  }
+
+  const setError = (err) => {
+    error.value = err
+  }
+
+  const clearError = () => {
+    error.value = null
+  }
+
+  const fetchProducts = async (params = {}) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.getProducts(params)
+      
+      if (response.success) {
+        products.value = response.data.products
+        pagination.value = response.data.pagination
+        appliedFilters.value = response.data.appliedFilters
+        storeInfo.value = response.data.store
+      } else {
+        throw new Error(response.message || 'Failed to fetch products')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch products')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProductById = async (productId) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.getProductById(productId)
+      
+      if (response.success) {
+        currentProduct.value = response.data
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to fetch product')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch product')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createProduct = async (productData) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.createProduct(productData)
+      
+      if (response.success) {
+        products.value.unshift(response.data)
+        pagination.value.totalItems += 1
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to create product')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to create product')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateProduct = async (productId, productData) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.updateProduct(productId, productData)
+      
+      if (response.success) {
+        const index = products.value.findIndex(p => p.id === productId)
+        if (index !== -1) {
+          products.value[index] = response.data
+        }
+        
+        if (currentProduct.value?.id === productId) {
+          currentProduct.value = response.data
+        }
+        
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to update product')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update product')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteProduct = async (productId) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.deleteProduct(productId)
+      
+      if (response.success) {
+        products.value = products.value.filter(p => p.id !== productId)
+        pagination.value.totalItems -= 1
+        
+        if (currentProduct.value?.id === productId) {
+          currentProduct.value = null
+        }
+        
+        return true
+      } else {
+        throw new Error(response.message || 'Failed to delete product')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to delete product')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleProductStatus = async (productId, isActive) => {
+    try {
+      if (!productService) initService()
+      
+      const response = await productService.toggleProductStatus(productId, isActive)
+      
+      if (response.success) {
+        const index = products.value.findIndex(p => p.id === productId)
+        if (index !== -1) {
+          products.value[index].isActive = isActive
+        }
+        
+        if (currentProduct.value?.id === productId) {
+          currentProduct.value.isActive = isActive
+        }
+        
+        return true
+      } else {
+        throw new Error(response.message || 'Failed to update product status')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update product status')
+      throw err
+    }
+  }
+
+  const updateStock = async (productId, stock) => {
+    try {
+      if (!productService) initService()
+      
+      const response = await productService.updateStock(productId, stock)
+      
+      if (response.success) {
+        const index = products.value.findIndex(p => p.id === productId)
+        if (index !== -1) {
+          products.value[index].stock = stock
+        }
+        
+        if (currentProduct.value?.id === productId) {
+          currentProduct.value.stock = stock
+        }
+        
+        return true
+      } else {
+        throw new Error(response.message || 'Failed to update stock')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to update stock')
+      throw err
+    }
+  }
+
+  const uploadProductImage = async (productId, imageFile, onProgress = null) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.uploadProductImage(
+        productId, 
+        imageFile, 
+        onProgress
+      )
+      
+      if (response.success) {
+        const index = products.value.findIndex(p => p.id === productId)
+        if (index !== -1) {
+          products.value[index].image = response.data.imageUrl
+        }
+        
+        if (currentProduct.value?.id === productId) {
+          currentProduct.value.image = response.data.imageUrl
+        }
+        
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to upload image')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to upload image')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProductStats = async () => {
+    try {
+      if (!productService) initService()
+      
+      const response = await productService.getProductStats()
+      
+      if (response.success) {
+        productStats.value = response.data
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to fetch stats')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch stats')
+      throw err
+    }
+  }
+
+  const bulkUpdateProducts = async (productIds, updateData) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.bulkUpdateProducts(productIds, updateData)
+      
+      if (response.success) {
+        // Update local products
+        productIds.forEach(id => {
+          const index = products.value.findIndex(p => p.id === id)
+          if (index !== -1) {
+            Object.assign(products.value[index], updateData)
+          }
+        })
+        
+        return true
+      } else {
+        throw new Error(response.message || 'Failed to bulk update products')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to bulk update products')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const duplicateProduct = async (productId) => {
+    try {
+      if (!productService) initService()
+      
+      setLoading(true)
+      clearError()
+
+      const response = await productService.duplicateProduct(productId)
+      
+      if (response.success) {
+        products.value.unshift(response.data)
+        pagination.value.totalItems += 1
+        return response.data
+      } else {
+        throw new Error(response.message || 'Failed to duplicate product')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to duplicate product')
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Utility actions
+  const resetStore = () => {
+    products.value = []
+    currentProduct.value = null
+    pagination.value = {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      itemsPerPage: 12,
+      hasNext: false,
+      hasPrev: false
+    }
+    appliedFilters.value = {}
+    storeInfo.value = null
+    isLoading.value = false
+    error.value = null
+    productStats.value = {}
+  }
+
+  const setCurrentProduct = (product) => {
+    currentProduct.value = product
+  }
+
+  const clearCurrentProduct = () => {
+    currentProduct.value = null
+  }
+
+  // Search and filter helpers
+  const searchProducts = async (searchTerm) => {
+    await fetchProducts({ search: searchTerm, page: 1 })
+  }
+
+  const filterByCategory = async (categoryId) => {
+    await fetchProducts({ category: categoryId, page: 1 })
+  }
+
+  const sortProducts = async (sortBy, sortOrder = 'desc') => {
+    await fetchProducts({ sortBy, sortOrder, page: 1 })
+  }
+
+  const goToPage = async (page) => {
+    await fetchProducts({ ...appliedFilters.value, page })
+  }
+
+  return {
+    // State
+    products,
+    currentProduct,
+    pagination,
+    appliedFilters,
+    storeInfo,
+    isLoading,
+    error,
+    productStats,
+
+    // Getters
+    totalProducts,
+    hasProducts,
+    activeProducts,
+    inactiveProducts,
+    lowStockProducts,
+    productsSortedByDate,
+    productsSortedByPrice,
+
+    // Actions
+    initService,
+    setLoading,
+    setError,
+    clearError,
+    fetchProducts,
+    fetchProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    toggleProductStatus,
+    updateStock,
+    uploadProductImage,
+    fetchProductStats,
+    bulkUpdateProducts,
+    duplicateProduct,
+    resetStore,
+    setCurrentProduct,
+    clearCurrentProduct,
+    searchProducts,
+    filterByCategory,
+    sortProducts,
+    goToPage
+  }
+})

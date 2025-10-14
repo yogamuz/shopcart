@@ -1,0 +1,33 @@
+{
+  "sneakers": {
+    "name": "Sneakers",
+    "slug": "sneakers",
+    "color": "blue",
+    "backgroundGradient": "linear-gradient(135deg, #F0F9FF, #E0F2FE)",
+    "backgroundElements": [
+      {
+        "classes": "w-20 h-20 rounded-xl bg-gradient-to-br from-blue-300 to-cyan-400 sneaker-glow",
+        "animation": "animate-pulse",
+        "style": "top: 10%; left: 10%"
+      },
+      {
+        "classes": "w-4 h-16 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full",
+        "animation": "animate-wiggle",
+        "style": "top: 33%; left: 33%; animation-delay: 0.5s"
+      }
+    ]
+  },
+  "furniture": {
+    "name": "Furniture",
+    "slug": "furniture",
+    "color": "amber",
+    "backgroundGradient": "linear-gradient(135deg, #FEF3C7, #FDE68A)",
+    "backgroundElements": [
+      {
+        "classes": "w-20 h-20 rounded-xl bg-gradient-to-br from-amber-300 to-orange-400",
+        "animation": "animate-pulse",
+        "style": "top: 10%; left: 10%"
+      }
+    ]
+  }
+}

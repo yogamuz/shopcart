@@ -1,0 +1,122 @@
+// stores/productsStore.js
+import { defineStore } from "pinia";
+import { productService } from "@/services/productService";
+const API_LIMITS = {
+  MIN_LIMIT: 1,
+  MAX_LIMIT: 50,
+  DEFAULT_LIMIT: 20,
+  MIN_PAGE: 1,
+  DEFAULT_PAGE: 1,
+};
+
+const sanitizeQueryParams = (params = {}) => {
+  const {
+    limit = API_LIMITS.DEFAULT_LIMIT,
+    page = API_LIMITS.DEFAULT_PAGE,
+    ...otherParams
+  } = params;
+
+  const sanitizedLimit = Math.min(
+    API_LIMITS.MAX_LIMIT,
+    Math.max(API_LIMITS.MIN_LIMIT, parseInt(limit) || API_LIMITS.DEFAULT_LIMIT)
+  );
+
+  const sanitizedPage = Math.max(
+    API_LIMITS.MIN_PAGE,
+    parseInt(page) || API_LIMITS.DEFAULT_PAGE
+  );
+
+  return {
+    ...otherParams,
+    limit: sanitizedLimit,
+    page: sanitizedPage,
+  };
+};
+export const useProductsStore = defineStore("products", {
+  state: () => ({
+    products: [],
+    pagination: null,
+    filters: null,
+    loading: false,
+    error: null,
+  }),
+
+  getters: {
+    isLoading: (state) => state.loading,
+    hasError: (state) => !!state.error,
+    getErrorMessage: (state) => state.error?.message || state.error,
+  },
+
+  actions: {
+    async fetchProducts(params = {}) {
+      try {
+        this.loading = true;
+        this.error = null;
+
+        const sanitizedParams = sanitizeQueryParams(params);
+        const response = await productService.getProducts(sanitizedParams);
+
+        if (response.success) {
+          const normalize = (p) => ({
+            id: p.id || p._id,
+            _id: p._id || p.id,
+            title: p.title || p.name,
+            name: p.name || p.title,
+            slug: p.slug,
+            description: p.description || "",
+            price: p.price || 0,
+            image: p.image?.url
+              ? p.image
+              : p.image || p.imageUrl || p.thumbnail || null,
+            category:
+              typeof p.category === "string"
+                ? p.category
+                : p.category?.name || p.category,
+            seller: p.seller,
+            stock: typeof p.stock === "number" ? p.stock : p.inStock ? 1 : 0,
+            rating: p.rating || 0,
+            reviews: p.reviews || 0,
+            isAvailable:
+              p.isAvailable !== undefined ? p.isAvailable : p.stock > 0,
+            storeName: p.storeName || p.seller?.name,
+            isLiked: p.isLiked || false,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+          });
+
+          const list =
+            response.data?.products || response.data?.data?.products || [];
+          this.products = list.map(normalize);
+          this.pagination =
+            response.data?.pagination ||
+            response.data?.data?.pagination ||
+            null;
+          this.filters =
+            response.data?.filters || response.data?.data?.filters || null;
+        } else {
+          throw new Error(response.message || "Failed to fetch products");
+        }
+
+        return response;
+      } catch (error) {
+        this.error = error;
+        this.products = [];
+        this.pagination = null;
+        this.filters = null;
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    clearError() {
+      this.error = null;
+    },
+
+    clearProducts() {
+      this.products = [];
+      this.pagination = null;
+      this.filters = null;
+    },
+  },
+});
