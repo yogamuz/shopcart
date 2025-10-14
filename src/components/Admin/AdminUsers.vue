@@ -272,9 +272,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAdminUsers } from "@/composables/useAdminUsers";
-import UserViewModal from "@/components/Admin/modals/UserViewModal.vue";
-import UserEditModal from "@/components/Admin/modals/UserEditModal.vue";
-import DeleteConfirmModal from "@/components/Admin/modals/DeleteConfirmModal.vue";
+import UserViewModal from "@/components/Admin/Modals/UserViewModal.vue";
+import UserEditModal from "@/components/Admin/Modals/UserEditModal.vue";
+import DeleteConfirmModal from "@/components/Admin/Modals/DeleteConfirmModal.vue";
 
 // Composable
 const { users, pagination, isLoading, error, hasUsers, totalUsers, fetchUsers, clearError } = useAdminUsers();
