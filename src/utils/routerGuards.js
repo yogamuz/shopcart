@@ -1,4 +1,4 @@
-// utils/routerGuards.js - UPDATED with seller profile fetch
+// utils/routerGuards.js - FIXED VERSION
 import { useAuthStore } from "@/stores/authStore";
 import { useSellerProfileStore } from "@/stores/sellerProfileStore";
 
@@ -41,6 +41,32 @@ export const setupRouterGuards = router => {
         });
       }
 
+      // ✅ FIXED: Wait for auth initialization to complete before role check
+      if (authStore.isInitializing) {
+        console.log("⏳ Waiting for auth initialization...");
+        await new Promise(resolve => {
+          const checkInterval = setInterval(() => {
+            if (!authStore.isInitializing) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          
+          // Timeout after 3 seconds
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 3000);
+        });
+      }
+
+      // ✅ FIXED: Add extra delay for mobile to ensure token propagation
+      const isMobile = window.innerWidth <= 768;
+      if (isMobile && authStore.user?.accessToken) {
+        console.log("📱 Mobile device detected - ensuring token propagation...");
+        await new Promise(resolve => setTimeout(resolve, 150));
+      }
+
       // ✅ Auto-fetch seller profile when entering seller dashboard
       if (authStore.isSeller && to.path.startsWith("/seller")) {
         try {
@@ -57,14 +83,35 @@ export const setupRouterGuards = router => {
         }
       }
 
-      // Check role-specific access
+      // ✅ FIXED: Better role checking with retry logic
       if (requiredRole) {
-        // ✅ STRICT: Hanya seller yang boleh
-        if (requiredRole === "seller" && authStore.userRole !== "seller") {
+        const maxRetries = 3;
+        let currentRole = authStore.userRole;
+        let retryCount = 0;
+
+        // Retry if role is still null (token might not be fully propagated)
+        while (!currentRole && retryCount < maxRetries) {
+          console.log(`🔄 Role not ready, retry ${retryCount + 1}/${maxRetries}...`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          currentRole = authStore.userRole;
+          retryCount++;
+        }
+
+        console.log("🔐 Role check:", {
+          requiredRole,
+          currentRole,
+          isAuthenticated: authStore.isAuthenticated,
+          hasToken: !!authStore.user?.accessToken
+        });
+
+        // ✅ FIXED: Only block if we're sure role mismatch after retries
+        if (requiredRole === "seller" && currentRole !== "seller") {
+          console.warn("⛔ Access denied: Seller role required but user has:", currentRole);
           return next("/");
         }
 
-        if (requiredRole === "admin" && authStore.userRole !== "admin") {
+        if (requiredRole === "admin" && currentRole !== "admin") {
+          console.warn("⛔ Access denied: Admin role required but user has:", currentRole);
           return next("/");
         }
 
