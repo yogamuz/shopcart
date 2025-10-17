@@ -1,4 +1,4 @@
-<!-- NavDropdown.vue - Updated for Products API -->
+<!-- NavDropdown.vue - Fixed Image Path for Production -->
 <template>
   <div class="relative">
     <button
@@ -115,16 +115,14 @@ const displayCategories = computed(() => {
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
 };
-// Fixed NavDropdown handleCategorySelect method
+
 const handleCategorySelect = async (category) => {
   try {
     isOpen.value = false;
     emit('select-category', category);
     
-    
     const categoryName = category.name?.toLowerCase() || category.names?.toLowerCase() || '';
     
-    // FIXED: Navigate directly to category page
     await router.push({
       path: `/category/${categoryName}`
     });
@@ -133,25 +131,24 @@ const handleCategorySelect = async (category) => {
     console.error('Navigation error:', error);
   }
 };
-// Get category image with local path (keep existing logic)
+
+// FIXED: Remove /public/ prefix for production
 const getCategoryImage = (category) => {
   const categoryName = (category?.name || category?.names || '').toLowerCase();
   
   // Map of available categories to their image paths
   const categoryImages = {
-    'toys': '/public/categories/toys.png',
-    'beauty': '/public/categories/beauty.png',
-    'gadgets': '/public/categories/gadgets.png',
-    'sneakers': '/public/categories/sneakers.png',
-    'fashion': '/public/categories/fashion.png',
-    'furniture': '/public/categories/furniture.png'
+    'toys': '/categories/toys.png',
+    'beauty': '/categories/beauty.png',
+    'gadgets': '/categories/gadgets.png',
+    'sneakers': '/categories/sneakers.png',
+    'fashion': '/categories/fashion.png',
+    'furniture': '/categories/furniture.png'
   };
   
-  // Return the local image path if category exists, otherwise use placeholder
   return categoryImages[categoryName] || `https://via.placeholder.com/40x40/f3f4f6/9ca3af?text=${encodeURIComponent(categoryName.charAt(0))}`;
 };
 
-// Get category color based on name (keep existing logic)
 const getCategoryColor = (category) => {
   const categoryName = (category.name || category.names || '').toLowerCase();
   
@@ -167,7 +164,6 @@ const getCategoryColor = (category) => {
   return colorMap[categoryName] || 'bg-gradient-to-br from-gray-400 to-gray-500';
 };
 
-// Handle image load errors - fallback to placeholder
 const handleImageError = (event) => {
   const img = event.target;
   const categoryName = img.closest('[data-category]')?.dataset.category || 'Category';
