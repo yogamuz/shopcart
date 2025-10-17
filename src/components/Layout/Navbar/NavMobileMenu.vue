@@ -100,13 +100,41 @@
       <router-link to="#" class="block text-gray-700 hover:text-blue-600 font-medium py-2">Delivery</router-link>
 
       <div class="flex space-x-4 pt-2 border-t border-gray-100">
-        <!-- Mobile Account Section -->
+        <!-- Mobile Account Section with Profile -->
         <div class="relative flex-1">
           <button
             @click="toggleMobileAccountMenu"
             class="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- User Avatar/Initial -->
+            <div v-if="isAuthenticated" class="relative">
+              <!-- Loading skeleton -->
+              <div v-if="isLoadingAvatar" class="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+              
+              <!-- Avatar image -->
+              <div
+                v-else-if="profileAvatarUrl"
+                class="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200"
+              >
+                <img
+                  :src="profileAvatarUrl"
+                  :alt="displayName"
+                  class="w-full h-full object-cover"
+                  @error="handleAvatarError"
+                />
+              </div>
+              
+              <!-- Fallback initials -->
+              <div
+                v-else
+                class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm border-2 border-gray-200"
+              >
+                {{ userInitial }}
+              </div>
+            </div>
+            
+            <!-- Guest Icon -->
+            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -114,39 +142,60 @@
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            <span class="font-medium">Account</span>
+            
+            <div class="flex flex-col items-start">
+              <span class="font-medium text-sm leading-tight">{{ displayName }}</span>
+              <span v-if="isAuthenticated" class="text-xs text-gray-500">View Profile</span>
+              <span v-else class="text-xs text-gray-500">Sign In</span>
+            </div>
           </button>
 
           <!-- Mobile Account Dropdown -->
           <div
             v-if="showMobileAccountMenu"
-            class="absolute bottom-full left-0 mb-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50"
+            class="absolute bottom-full left-0 mb-2 w-56 bg-white rounded-lg shadow-xl py-2 border border-gray-200 z-50"
           >
             <div v-if="!isAuthenticated">
               <button
                 @click="handleMobileNavigation('/login')"
-                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                class="flex items-center w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
               >
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
                 Sign In
               </button>
               <button
                 @click="handleMobileNavigation('/register')"
-                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                class="flex items-center w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
               >
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
                 Register
               </button>
             </div>
             <div v-else>
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900">{{ displayName }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ currentUser?.email || 'User Account' }}</p>
+              </div>
               <button
-                @click="handleMobileNavigation('/profile')"
-                class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+                @click="handleMobileNavigation('/dashboard')"
+                class="flex items-center w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
               >
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
                 My Profile
               </button>
               <button
                 @click="handleMobileLogout"
-                class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
+                class="flex items-center w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
               >
+                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
                 Sign Out
               </button>
             </div>
@@ -182,10 +231,11 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "@/composables/useToast";
+import { useUserProfile } from "@/composables/useUserProfile";
 
 // Props
 defineProps({
@@ -202,15 +252,77 @@ defineProps({
 });
 
 // Emits
-defineEmits(["toggle-dropdown", "select-category"]);
+const emit = defineEmits(["toggle-dropdown", "select-category"]);
 
 // Composables
 const router = useRouter();
 const { isAuthenticated, logout, isLoading } = useAuth();
 const { success, error } = useToast();
 
+// User Profile Composable
+const {
+  profileDisplayName,
+  profileInitials,
+  avatarUrl: profileAvatarUrl,
+  initialize: initializeProfile,
+} = useUserProfile();
+
 // Mobile account menu state
 const showMobileAccountMenu = ref(false);
+
+// Computed untuk avatar loading state
+const isLoadingAvatar = computed(() => {
+  return isAuthenticated.value && !profileDisplayName.value;
+});
+
+// Display name dengan fallback
+const displayName = computed(() => {
+  if (profileDisplayName.value && profileDisplayName.value !== "User") {
+    return profileDisplayName.value;
+  }
+  return "Guest";
+});
+
+// User initials dengan fallback
+const userInitial = computed(() => {
+  if (profileInitials.value && profileInitials.value !== "U") {
+    return profileInitials.value;
+  }
+  return "U";
+});
+
+// Current user untuk email display
+const currentUser = computed(() => {
+  if (!isAuthenticated.value) return null;
+  const userData = localStorage.getItem('user');
+  if (userData) {
+    try {
+      return JSON.parse(userData);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+});
+
+// Watch avatar URL changes
+watch(profileAvatarUrl, newUrl => {
+  if (newUrl) {
+    const img = new Image();
+    img.src = newUrl;
+  }
+});
+
+// Watch for authentication changes
+watch(
+  isAuthenticated,
+  async (newValue, oldValue) => {
+    if (newValue && oldValue !== undefined) {
+      await initializeProfile(true);
+    }
+  },
+  { flush: "post" }
+);
 
 // Methods
 const toggleMobileAccountMenu = () => {
@@ -323,6 +435,7 @@ const getCategoryColor = category => {
       return "bg-gradient-to-br from-gray-400 to-gray-500";
   }
 };
+
 const scrollToDeals = () => {
   const dealsSection = document.getElementById('deals');
   if (dealsSection) {
@@ -332,6 +445,19 @@ const scrollToDeals = () => {
     });
   }
 };
+
+// Handle avatar error
+const handleAvatarError = (event) => {
+  event.target.style.display = 'none';
+};
+
+// Initialize profile on mount
+onMounted(async () => {
+  if (isAuthenticated.value) {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    await initializeProfile(true);
+  }
+});
 </script>
 
 <style scoped>
