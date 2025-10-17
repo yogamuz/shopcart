@@ -281,12 +281,12 @@ const getCategoryImage = category => {
 
   // Map of available categories to their image paths
   const categoryImages = {
-    toys: "/public/categories/toys.png",
-    beauty: "/public/categories/beauty.png",
-    gadgets: "/public/categories/gadgets.png",
-    sneakers: "/public/categories/sneakers.png",
-    fashion: "/public/categories/fashion.png",
-    furniture: "/public/categories/furniture.png",
+    toys: "/categories/toys.png",
+    beauty: "/categories/beauty.png",
+    gadgets: "/categories/gadgets.png",
+    sneakers: "/categories/sneakers.png",
+    fashion: "/categories/fashion.png",
+    furniture: "/categories/furniture.png",
   };
 
   return (
