@@ -35,6 +35,28 @@ export const useApiClient = (token = null) => {
     failedQueue = [];
   };
 
+  /**
+   * Helper: Better network error detection
+   * Membedakan antara network error vs auth error
+   */
+  const isNetworkError = error => {
+    if (!error.response) return true; // No response = network error
+    if (error.code === "ECONNABORTED") return true; // Timeout
+    if (error.code === "ENOTFOUND") return true; // DNS error
+    return false;
+  };
+
+  /**
+   * Helper: Check if refresh should be retried
+   * Don't refresh jika network truly down
+   */
+  const shouldAttemptRefresh = error => {
+    if (isNetworkError(error)) return false; // Network error, jangan retry
+    if (error.response?.status === 401) return true; // Auth error, coba refresh
+    if (error.response?.status === 403) return false; // Permission error, jangan retry
+    return false;
+  };
+
   apiClient.interceptors.request.use(
     config => {
       isLoading.value = true;
@@ -69,6 +91,9 @@ export const useApiClient = (token = null) => {
     }
   );
   // Response interceptor with auto refresh logic - FIXED
+  // FILE: composables/useApiClient.js
+  // COMPLETE RESPONSE INTERCEPTOR - GANTI SELURUH ERROR HANDLER
+
   apiClient.interceptors.response.use(
     response => {
       isLoading.value = false;
@@ -81,15 +106,31 @@ export const useApiClient = (token = null) => {
       const isRefreshRequest = originalRequest.url?.includes("/refresh");
       const isVerifyRequest = originalRequest.url?.includes("/verify");
 
-      if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest && !isVerifyRequest) {
-        const needsRefresh =
-          error.response?.data?.needsRefresh ||
-          error.response?.data?.message?.includes("expired") ||
-          error.response?.data?.message?.includes("token");
+      // Helper: Detect network error vs auth error
+      const isNetworkError = !error.response || error.code === "ECONNABORTED" || error.code === "ENOTFOUND";
 
+      // Main 401 handler dengan network awareness
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        const needsRefresh = error.response?.data?.needsRefresh;
+
+        // Jangan coba refresh kalau network error
+        if (isNetworkError) {
+          logger.warn("Network error on 401 - not attempting refresh");
+
+          const apiError = {
+            status: error.response?.status || 0,
+            message: "Network error. Please check your connection.",
+            errors: error.response?.data?.errors || [],
+            data: error.response?.data || null,
+            code: error.code,
+            isNetworkError: true,
+          };
+          error.value = apiError;
+          return Promise.reject(apiError);
+        }
+
+        // Coba refresh kalau needsRefresh flag ada
         if (needsRefresh) {
-          originalRequest._retry = true;
-
           if (isRefreshing) {
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject });
@@ -107,11 +148,11 @@ export const useApiClient = (token = null) => {
             const { useAuthStore } = await import("@/stores/authStore");
             const authStore = useAuthStore();
 
-            logger.tokenRefresh("Attempting to refresh token..."); // ← GANTI console.log
+            logger.tokenRefresh("Attempting to refresh token...");
             const refreshed = await authStore.refreshToken();
 
             if (refreshed && authStore.user) {
-              logger.tokenRefreshSuccess(); // ← GANTI console.log
+              logger.tokenRefreshSuccess();
 
               const newToken = authStore.user.accessToken;
               processQueue(null, newToken);
@@ -123,7 +164,7 @@ export const useApiClient = (token = null) => {
 
               return apiClient(originalRequest);
             } else {
-              logger.tokenRefreshFailed("logging out"); // ← GANTI console.log
+              logger.tokenRefreshFailed("logging out");
               processQueue(new Error("Token refresh failed"), null);
 
               await authStore.logout();
@@ -137,7 +178,7 @@ export const useApiClient = (token = null) => {
               return Promise.reject(error);
             }
           } catch (refreshError) {
-            logger.tokenRefreshFailed(refreshError); // ← GANTI console.log
+            logger.tokenRefreshFailed(refreshError);
             processQueue(refreshError, null);
 
             try {
@@ -145,26 +186,38 @@ export const useApiClient = (token = null) => {
               const authStore = useAuthStore();
               await authStore.logout();
             } catch (e) {
-              logger.warn("Failed to logout after refresh error:", e); // ← GANTI console.warn
+              logger.warn("Failed to logout after refresh error:", e);
             }
 
             return Promise.reject(refreshError);
           } finally {
             isRefreshing = false;
           }
+        } else {
+          // 401 tapi tidak ada needsRefresh flag - logout langsung
+          const { useAuthStore } = await import("@/stores/authStore");
+          const authStore = useAuthStore();
+          await authStore.logout();
+
+          if (typeof window !== "undefined" && window.$router) {
+            window.$router.push("/login");
+          }
+
+          return Promise.reject(error);
         }
       }
 
+      // Standard error formatting
       const apiError = {
         status: error.response?.status || 0,
         message: error.response?.data?.message || error.message || "Request failed",
         errors: error.response?.data?.errors || [],
         data: error.response?.data || null,
         code: error.code,
-        isNetworkError: !error.response,
+        isNetworkError: isNetworkError,
       };
 
-      // Handle specific status codes - TIDAK BERUBAH
+      // Specific status code messages
       switch (error.response?.status) {
         case 401:
           if (isRefreshRequest) {
@@ -188,7 +241,7 @@ export const useApiClient = (token = null) => {
           apiError.message = "Internal server error. Please try again later.";
           break;
         default:
-          if (!error.response) {
+          if (isNetworkError) {
             apiError.message = "Network error. Please check your connection.";
           }
       }
@@ -197,6 +250,7 @@ export const useApiClient = (token = null) => {
       return Promise.reject(apiError);
     }
   );
+
   // HTTP Methods (unchanged)
   const get = async (url, config = {}) => {
     try {

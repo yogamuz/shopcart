@@ -199,56 +199,62 @@ export const useAuthStore = defineStore("auth", () => {
       }
     }
   };
-  // Fixed refreshToken method in authStore.js
-  const refreshToken = async () => {
-    try {
-      // FIXED: Add better checking before attempting refresh
-      // Skip refresh jika tidak ada indikasi token atau fresh verification
-      if (!user.value && !isVerificationFresh()) {
-        console.log("No user or fresh verification - skipping refresh");
-        return false;
-      }
+// FILE: stores/authStore.js
+// GANTI METHOD "refreshToken" LENGKAP
 
-      // FIXED: Check if we have cookies before attempting refresh
-      if (typeof document !== "undefined") {
-        const hasCookies = document.cookie
-          .split(";")
-          .some(cookie => cookie.trim().startsWith("refreshToken=") || cookie.trim().startsWith("refresh_token="));
-
-        if (!hasCookies && !user.value) {
-          console.log("No refresh token cookie found - skipping refresh");
-          return false;
-        }
-      }
-
-      console.log("🔄 Attempting token refresh...");
-      const response = await authService.refresh();
-
-      if (response.success) {
-        console.log("✅ Token refresh successful");
-        // Store the access token along with user data
-        const userData = {
-          ...response.user,
-          accessToken: response.accessToken,
-        };
-
-        setAuth(userData);
-        return true;
-      }
-
-      console.log("❌ Refresh response not successful:", response);
-      return false;
-    } catch (err) {
-      // FIXED: Better error handling - don't log if expected failure
-      if (err.status === 400 || err.status === 401) {
-        console.log("🔄 Refresh token expired or invalid - clearing auth");
-        clearAuth();
-      } else {
-        console.warn("Token refresh failed:", err);
-      }
+const refreshToken = async () => {
+  try {
+    // Skip refresh jika tidak ada indikasi token atau fresh verification
+    if (!user.value && !isVerificationFresh()) {
+      console.log("No user or fresh verification - skipping refresh");
       return false;
     }
-  };
+
+    // Check if we have cookies before attempting refresh
+    if (typeof document !== "undefined") {
+      const hasCookies = document.cookie
+        .split(";")
+        .some(cookie => cookie.trim().startsWith("refreshToken=") || cookie.trim().startsWith("refresh_token="));
+
+      if (!hasCookies && !user.value) {
+        console.log("No refresh token cookie found - skipping refresh");
+        return false;
+      }
+    }
+
+    console.log("🔄 Attempting token refresh...");
+    const response = await authService.refresh();
+
+    if (response.success) {
+      console.log("✅ Token refresh successful");
+      const userData = {
+        ...response.user,
+        accessToken: response.accessToken,
+      };
+
+      setAuth(userData);
+      return true;
+    }
+
+    console.log("❌ Refresh response not successful:", response);
+    return false;
+  } catch (err) {
+    // Detect network error vs auth error
+    const isNetworkError = !err.status || err.code === "ECONNABORTED" || err.code === "ENOTFOUND";
+
+    if (err.status === 400 || err.status === 401) {
+      console.log("🔄 Refresh token expired or invalid - clearing auth");
+      clearAuth();
+    } else if (isNetworkError) {
+      // Network error - jangan clear auth, biarkan user retry
+      console.warn("Token refresh failed (network error):", err.message);
+      return false;
+    } else {
+      console.warn("Token refresh failed:", err);
+    }
+    return false;
+  }
+};
 
   // Fixed verifyToken method in authStore.js
   const verifyToken = async (force = false) => {
