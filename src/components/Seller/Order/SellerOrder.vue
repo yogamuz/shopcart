@@ -1,8 +1,6 @@
 <!-- SellerOrder.vue - Clean Order Management Component -->
 <template>
   <div class="orders-content">
-    <!-- Metric Cards -->
-    <MetricCards />
 
     <!-- Control Panel with Cancel Request Button -->
     <ControlPanel
@@ -68,7 +66,6 @@ import { ref, computed, watch } from "vue";
 import { useSellerOrders } from "@/composables/useSellerOrders";
 import { useSellerCancelRequests } from "@/composables/useCancelRequests";
 
-import MetricCards from "@/components/Seller/Order/MetricCards.vue";
 import ControlPanel from "@/components/Seller/Order/ControlPanel.vue";
 import OrdersTable from "@/components/Seller/Order/OrdersTable.vue";
 import OrderModal from "@/components/Seller/Order/OrderModal.vue";
