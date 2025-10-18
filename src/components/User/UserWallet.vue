@@ -438,13 +438,7 @@ const confirmPin = ref("");
 const pinError = ref("");
 const currentPin = ref("");
 const canChangePin = computed(() => {
-  console.log("🔍 canChangePin check:", {
-    isSet: pinStatus.value.isSet,
-    currentPin: currentPin.value.length,
-    newPin: newPin.value.length,
-    confirmPin: confirmPin.value.length,
-    match: newPin.value === confirmPin.value,
-  });
+
 
   if (pinStatus.value.isSet) {
     // Jika sudah punya PIN, butuh semua 3 field
@@ -455,7 +449,6 @@ const canChangePin = computed(() => {
       newPin.value === confirmPin.value &&
       /^\d{6}$/.test(currentPin.value) &&
       /^\d{6}$/.test(newPin.value);
-    console.log("🔍 Change mode - isValid:", isValid);
     return isValid;
   } else {
     // Jika belum punya PIN, hanya butuh newPin dan confirmPin
@@ -464,7 +457,6 @@ const canChangePin = computed(() => {
       confirmPin.value.length === 6 &&
       newPin.value === confirmPin.value &&
       /^\d{6}$/.test(newPin.value);
-    console.log("🔍 Set mode - isValid:", isValid);
     return isValid;
   }
 });
@@ -730,8 +722,6 @@ const loadWalletData = async () => {
     });
 
     // Force check PIN status setelah wallet data loaded
-    console.log("📌 PIN Status:", pinStatus.value);
-    console.log("📌 isSet:", pinStatus.value.isSet);
   } catch (error) {
     console.error("Failed to load wallet data:", error);
   }

@@ -131,10 +131,7 @@ export const useCartStore = defineStore("cart", () => {
 
       if (response.success) {
         updateCartData(response.data);
-        console.log("Cart initialized:", {
-          count: cartCount.value,
-          totalQuantities: totalQuantities.value,
-        });
+
         return { success: true, data: response.data };
       } else {
         console.warn("Failed to initialize cart:", response.message);
@@ -174,7 +171,6 @@ export const useCartStore = defineStore("cart", () => {
       if (response.success) {
         const count = parseInt(response.data.count) || 0;
         const validCount = isNaN(count) ? 0 : Math.max(0, count);
-        console.log("Cart count refreshed:", validCount);
         return validCount;
       }
 

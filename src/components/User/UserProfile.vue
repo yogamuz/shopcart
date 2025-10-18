@@ -568,7 +568,6 @@ watch(
         gender: newProfile.gender || "",
       };
 
-      console.log("✅ Form synced with profile:", profileForm.value);
     }
   },
   { immediate: true, deep: true }

@@ -78,7 +78,6 @@ const initialize = async (forceRefresh = false) => {
   }
 
   if (isInitialized.value && !forceRefresh && hasProfile.value && addresses.value.length > 0) {
-    console.log('✅ Profile already initialized, addresses count:', addresses.value?.length);
     return;
   }
 
@@ -89,8 +88,6 @@ const initialize = async (forceRefresh = false) => {
       profileStore.fetchAddresses()
     ]);
     
-    console.log('✅ Profile initialized, addresses:', addresses.value);
-    console.log('✅ Addresses count:', addresses.value?.length);
     
     isInitialized.value = true;
     lastRefresh.value = new Date();
@@ -209,7 +206,6 @@ const uploadAvatar = async (file, options = {}) => {
     await nextTick();
     
     // Log untuk debugging
-    console.log('Upload completed, avatar URL:', avatarUrl.value);
     
     if (options.onSuccess) {
       options.onSuccess(result);
@@ -405,11 +401,9 @@ const setDefaultAddress = async (addressIndex) => {
 
 // Revisi watch - GANTI BAGIAN INI (sekitar baris 251-270)
 watch(isLoggedIn, async (newValue, oldValue) => {
-  console.log('🔍 isLoggedIn changed:', { from: oldValue, to: newValue });
   
   if (newValue && !isInitialized.value) {
     // Login baru → tunggu auth ready, baru initialize
-    console.log('🔄 User logged in - waiting for auth ready...');
     
     // ✅ PERBAIKAN: Tunggu hingga token benar-benar ready
     await new Promise(resolve => setTimeout(resolve, 200));
@@ -421,7 +415,6 @@ watch(isLoggedIn, async (newValue, oldValue) => {
     await initialize(true); // Force refresh
   } else if (!newValue) {
     // Logout → clear semua
-    console.log('🔄 User logged out - clearing profile data...');
     isInitialized.value = false;
     lastRefresh.value = null;
     profileStore.$reset();

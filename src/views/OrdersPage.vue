@@ -146,55 +146,30 @@ const tax = computed(() => {
 // ✅ DEBUG WATCHES
 watch(
   () => orderStore.displayOrder,
-  newVal => {
-    console.log("🔥 OrdersPage - displayOrder changed:", {
-      exists: !!newVal,
-      orderId: newVal?.id,
-      parcelsCount: newVal?.parcels?.length,
-      parcelIds: newVal?.parcels?.map(p => p.parcelId),
-      selectedParcel: orderStore.selectedParcelId,
-    });
-  },
+
   { deep: true, immediate: true }
 );
 
 watch(
   () => orderStore.selectedParcelId,
-  newVal => {
-    console.log("🎯 OrdersPage - selectedParcelId changed:", newVal);
-  },
+
   { immediate: true }
 );
 
 const viewOrderDetail = async (order, parcel = null) => {
   try {
-    console.log("📂 viewOrderDetail called");
-    console.log("   order:", order.id, order.orderNumber);
-    console.log("   parcel:", parcel?.parcelId, parcel?.seller?.storeName);
+
 
     if (parcel?.parcelId) {
-      console.log("   🎯 Setting selectedParcel:", parcel.parcelId);
       orderStore.setSelectedParcel(parcel.parcelId);
 
       // Verify it was set
-      console.log("   ✅ Verified selectedParcelId:", orderStore.selectedParcelId);
     }
 
-    console.log("   📡 Fetching order...");
     await orderStore.fetchOrderById(order.id, true);
     await nextTick();
 
-    console.log("   📊 After fetch:");
-    console.log("      currentOrder:", orderStore.currentOrder?.id);
-    console.log("      selectedParcelId:", orderStore.selectedParcelId);
-    console.log("      displayOrder:", orderStore.displayOrder?.id);
-    console.log("      displayOrder parcels:", orderStore.displayOrder?.parcels?.length);
-    console.log(
-      "      displayOrder parcelIds:",
-      orderStore.displayOrder?.parcels?.map(p => p.parcelId)
-    );
 
-    console.log("   ✅ Opening modal");
     showOrderDetail.value = true;
   } catch (error) {
     console.error("Failed to load order details:", error);
@@ -210,16 +185,7 @@ const handleCreateOrder = async orderData => {
       address_id: orderData.addressId,
       notes: orderData.notes || "",
     });
-    console.log("🔍 CREATE ORDER RESPONSE:", JSON.stringify(result.data, null, 2));
-    console.log("🔍 Create Order Response:", {
-      success: result.success,
-      orderId: result.data?.orderId,
-      hasItems: !!result.data?.items,
-      itemsCount: result.data?.items?.length,
-      hasParcels: !!result.data?.parcels,
-      hasSellers: !!result.data?.sellers,
-      rawData: result.data,
-    });
+
     if (result.success) {
       await cartStore.clearCart();
       await router.push({
@@ -390,7 +356,6 @@ const handleCancelClose = () => {
 };
 
 const handleConfirmDelivery = async (orderId, confirmData = {}) => {
-  console.log("🔍 handleConfirmDelivery received:", { orderId, confirmData });
   try {
     // Use new dynamic endpoint
     const result = await orderStore.confirmItemsDelivery(String(orderId), confirmData);
@@ -425,7 +390,6 @@ const handleConfirmDelivery = async (orderId, confirmData = {}) => {
 // Di OrdersPage.vue - tambahkan handler baru
 
 const handleUpdateReview = async (orderId, productId, reviewData) => {
-  console.log("🔍 handleUpdateReview called:", { orderId, productId, reviewData });
   try {
     const result = await orderStore.updateProductReview(orderId, productId, reviewData);
 
@@ -466,9 +430,7 @@ const fetchOrders = async () => {
     params.status = activeStatus.value;
   }
 
-  console.log("📡 OrdersPage: Fetching orders with params:", params);
   const result = await orderStore.fetchOrders(params);
-  console.log("📡 OrdersPage: Fetch result:", result);
   return result;
 };
 
@@ -537,7 +499,6 @@ watch(
 
 watch(showOrderDetail, newValue => {
   if (!newValue) {
-    console.log("🧹 Modal closed, clearing selected parcel");
     orderStore.clearSelectedParcel();
   }
 });

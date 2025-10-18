@@ -160,7 +160,6 @@ const toggleSidebar = () => {
 
 const handleNavClick = navName => {
   try {
-    console.log("Navigating to:", navName);
 
     // Prevent self-assignment if already on the same page
     if (activeNav.value === navName) {
@@ -180,31 +179,26 @@ const handleNavClick = navName => {
 };
 
 const handleGlobalSearch = query => {
-  console.log("Global search:", query, "for section:", activeNav.value);
 
   // Delegate to appropriate child component
   if (activeNav.value === "Orders" && sellerOrderRef.value) {
     sellerOrderRef.value.handleSearch(query);
   } else if (activeNav.value === "Wallet" && sellerWalletRef.value) {
     // SellerWallet component will handle search internally via emit
-    console.log("Wallet search delegated to component");
   }
   // Add similar logic for other components later
 };
 
 const handleGlobalSearchClear = () => {
-  console.log("Global search cleared for section:", activeNav.value);
 
   if (activeNav.value === "Orders" && sellerOrderRef.value) {
     sellerOrderRef.value.handleSearchClear();
   } else if (activeNav.value === "Wallet" && sellerWalletRef.value) {
     // Clear search in wallet component
-    console.log("Wallet search cleared");
   }
 };
 
 const handleWalletSearch = query => {
-  console.log("Wallet search received:", query);
   // Additional handling for wallet search if needed
 };
 

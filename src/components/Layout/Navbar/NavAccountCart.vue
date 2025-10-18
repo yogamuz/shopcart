@@ -251,6 +251,9 @@
     </button>
   </div>
 </template>
+
+// navAccountCart.vue - FIXED
+
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -264,10 +267,8 @@ const {
   profileDisplayName,
   profileInitials,
   avatarUrl: profileAvatarUrl,
-  initialize: initializeProfile,
+  // ❌ HAPUS: initialize - tidak perlu di navbar
 } = useUserProfile();
-
-defineEmits(["toggle-mobile-menu"]);
 
 const router = useRouter();
 const { user, isAuthenticated, isSeller, isAdmin, logout, isLoading } = useAuth();
@@ -275,31 +276,22 @@ const { user, isAuthenticated, isSeller, isAdmin, logout, isLoading } = useAuth(
 // Local state
 const showAccountMenu = ref(false);
 const accountContainer = ref(null);
-const dropdownMenu = ref(null);
 
-// Computed properties
+// Computed properties - sama seperti sebelumnya
 const userDisplayName = computed(() => {
-  // Priority 1: Profile display name (jika valid dan bukan default)
   if (profileDisplayName.value && profileDisplayName.value !== "User") {
     return profileDisplayName.value;
   }
-
-  // Priority 2: Auth user data
   if (!user.value) return "User";
-
-  // Coba berbagai sumber nama
   if (user.value.name && user.value.name !== "User") {
     return user.value.name;
   }
-
   if (user.value.username && user.value.username !== "User") {
     return user.value.username;
   }
-
   if (user.value.email) {
     return user.value.email.split("@")[0];
   }
-
   return "User";
 });
 
@@ -327,41 +319,20 @@ const isLoadingAvatar = computed(() => {
   return isAuthenticated.value && !profileDisplayName.value;
 });
 
-// Watch avatar URL changes and preload
+// Watch avatar URL changes and preload - KEEP THIS
 watch(profileAvatarUrl, newUrl => {
   if (newUrl) {
     const img = new Image();
     img.src = newUrl;
   }
 });
-// Watch for authentication changes and re-initialize profile
-watch(
-  isAuthenticated,
-  async (newValue, oldValue) => {
-    // Jika baru login atau token baru di-refresh
-    if (newValue && oldValue !== undefined) {
-      console.log("🔄 Auth state changed - re-initializing profile...");
-      await initializeProfile(true); // Force refresh
-    }
-  },
-  { flush: "post" }
-);
 
-// Watch for user changes (after token refresh)
-watch(
-  () => user.value?.accessToken,
-  async (newToken, oldToken) => {
-    if (newToken && newToken !== oldToken && isAuthenticated.value) {
-      console.log("🔄 Token refreshed - re-fetching profile...");
-      // Tunggu sebentar untuk memastikan token ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-      await initializeProfile(true); // Force refresh
-    }
-  },
-  { flush: "post" }
-);
+// ❌ HAPUS KEDUA WATCH INI - Redundant!
+// watch(isAuthenticated, ...) 
+// watch(() => user.value?.accessToken, ...)
+// Profile initialize sudah di-handle di composable useUserProfile
 
-// Methods
+// Methods - sama seperti sebelumnya
 const getUserDisplayName = () => userDisplayName.value;
 const getUserInitials = () => userInitials.value;
 
@@ -408,23 +379,16 @@ const handleClickOutside = event => {
   }
 };
 
-// Lifecycle hooks
-onMounted(async () => {
-  document.addEventListener("click", handleClickOutside, { passive: true });
-
-  if (isAuthenticated.value) {
-    console.log("🚀 NavAccountCart mounted - initializing profile...");
-
-    // Tunggu sebentar untuk memastikan auth sudah settle
-    await new Promise(resolve => setTimeout(resolve, 150));
-
-    // Force refresh untuk memastikan data terbaru
-    await initializeProfile(true);
-  }
-});
+// ❌ HAPUS onMounted yang initialize profile
+// onMounted sudah di-handle di useUserProfile composable
 
 onUnmounted(() => {
   closeAccountMenu();
   document.removeEventListener("click", handleClickOutside);
+});
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside, { passive: true });
+  // ✅ Hanya setup event listener, jangan initialize profile
 });
 </script>

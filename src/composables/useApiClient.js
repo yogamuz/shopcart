@@ -58,26 +58,43 @@ export const useApiClient = (token = null) => {
   };
 
   apiClient.interceptors.request.use(
-    config => {
+    async config => {
       isLoading.value = true;
       error.value = null;
 
+      // Skip jika retry request
       if (config._isRetry && config.headers.Authorization) {
         return config;
       }
 
       try {
-        const { useAuthStore } = require("@/stores/authStore");
+        const { useAuthStore } = await import("@/stores/authStore");
         const authStore = useAuthStore();
-        const currentToken = authStore.user?.accessToken;
+
+        // ✅ FIX: Check if token near expiry BEFORE making request
+        if (authStore.accessToken && authStore.isTokenNearExpiry()) {
+          console.log("⚠️ Token near expiry - preemptive refresh");
+
+          const refreshed = await authStore.refreshToken();
+
+          if (!refreshed) {
+            console.warn("❌ Preemptive refresh failed - using old token");
+          } else {
+            console.log("✅ Preemptive refresh successful");
+          }
+        }
+
+        const currentToken = authStore.accessToken;
 
         if (currentToken) {
           config.headers.Authorization = `Bearer ${currentToken}`;
-          logger.tokenSet(config.url); // ← GANTI console.log
+          // ✅ Jangan log untuk setiap request, terlalu noise
+          // logger.tokenSet(config.url);
         } else {
-          logger.tokenMissing(config.url); // ← GANTI console.log
+          logger.tokenMissing(config.url);
         }
       } catch (err) {
+        console.warn("Request interceptor error:", err);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -90,9 +107,6 @@ export const useApiClient = (token = null) => {
       return Promise.reject(error);
     }
   );
-  // Response interceptor with auto refresh logic - FIXED
-  // FILE: composables/useApiClient.js
-  // COMPLETE RESPONSE INTERCEPTOR - GANTI SELURUH ERROR HANDLER
 
   apiClient.interceptors.response.use(
     response => {
@@ -105,38 +119,40 @@ export const useApiClient = (token = null) => {
 
       const isRefreshRequest = originalRequest.url?.includes("/refresh");
       const isVerifyRequest = originalRequest.url?.includes("/verify");
+      const isNetworkError = !error.response || error.code === "ECONNABORTED";
 
-      // Helper: Detect network error vs auth error
-      const isNetworkError = !error.response || error.code === "ECONNABORTED" || error.code === "ENOTFOUND";
-
-      // Main 401 handler dengan network awareness
+      // ✅ FIX: 401 handler dengan better error detection
       if (error.response?.status === 401 && !originalRequest._retry) {
         const needsRefresh = error.response?.data?.needsRefresh;
 
-        // Jangan coba refresh kalau network error
-        if (isNetworkError) {
-          logger.warn("Network error on 401 - not attempting refresh");
+        // ✅ FIX: Detect network error lebih baik
+        const isNetworkError =
+          !error.response ||
+          error.code === "ECONNABORTED" ||
+          error.code === "ERR_NETWORK" ||
+          error.message?.includes("Network Error");
 
+        if (isNetworkError) {
+          logger.warn("Network error - not attempting refresh");
           const apiError = {
-            status: error.response?.status || 0,
-            message: "Network error. Please check your connection.",
-            errors: error.response?.data?.errors || [],
-            data: error.response?.data || null,
-            code: error.code,
+            status: 0,
+            message: "Network error. Check your connection.",
             isNetworkError: true,
           };
           error.value = apiError;
           return Promise.reject(apiError);
         }
 
-        // Coba refresh kalau needsRefresh flag ada
+        // ✅ FIX: Only refresh if backend explicitly says so
         if (needsRefresh) {
           if (isRefreshing) {
+            console.log("⏳ Refresh in progress - queuing request");
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject });
             })
               .then(token => {
                 originalRequest.headers.Authorization = `Bearer ${token}`;
+                originalRequest._retry = true;
                 return apiClient(originalRequest);
               })
               .catch(err => Promise.reject(err));
@@ -148,31 +164,32 @@ export const useApiClient = (token = null) => {
             const { useAuthStore } = await import("@/stores/authStore");
             const authStore = useAuthStore();
 
-            logger.tokenRefresh("Attempting to refresh token...");
+            logger.tokenRefresh("Refreshing token...");
             const refreshed = await authStore.refreshToken();
 
-            if (refreshed && authStore.user) {
+            if (refreshed && authStore.accessToken) {
               logger.tokenRefreshSuccess();
 
-              const newToken = authStore.user.accessToken;
+              const newToken = authStore.accessToken;
               processQueue(null, newToken);
 
               await new Promise(resolve => setTimeout(resolve, 50));
 
               originalRequest.headers.Authorization = `Bearer ${newToken}`;
-              originalRequest._isRetry = true;
+              originalRequest._retry = true;
 
               return apiClient(originalRequest);
             } else {
-              logger.tokenRefreshFailed("logging out");
-              processQueue(new Error("Token refresh failed"), null);
+              logger.tokenRefreshFailed("Token refresh returned false");
+              processQueue(new Error("Refresh failed"), null);
 
-              await authStore.logout();
+              // ✅ FIX: Jangan logout jika network error
+              if (!error.isNetworkError) {
+                await authStore.logout();
 
-              if (typeof window !== "undefined" && window.$router) {
-                window.$router.push("/login");
-              } else if (typeof window !== "undefined") {
-                window.location.href = "/login";
+                if (typeof window !== "undefined" && window.$router) {
+                  window.$router.push("/login");
+                }
               }
 
               return Promise.reject(error);
@@ -181,12 +198,17 @@ export const useApiClient = (token = null) => {
             logger.tokenRefreshFailed(refreshError);
             processQueue(refreshError, null);
 
-            try {
-              const { useAuthStore } = await import("@/stores/authStore");
-              const authStore = useAuthStore();
-              await authStore.logout();
-            } catch (e) {
-              logger.warn("Failed to logout after refresh error:", e);
+            // ✅ FIX: Check if network error before logout
+            const isRefreshNetworkError =
+              !refreshError.status || refreshError.code === "ECONNABORTED" || refreshError.code === "ERR_NETWORK";
+
+            if (!isRefreshNetworkError) {
+              try {
+                const { useAuthStore } = await import("@/stores/authStore");
+                await useAuthStore().logout();
+              } catch (e) {
+                logger.warn("Logout failed:", e);
+              }
             }
 
             return Promise.reject(refreshError);
@@ -194,20 +216,21 @@ export const useApiClient = (token = null) => {
             isRefreshing = false;
           }
         } else {
-          // 401 tapi tidak ada needsRefresh flag - logout langsung
-          const { useAuthStore } = await import("@/stores/authStore");
-          const authStore = useAuthStore();
-          await authStore.logout();
+          // ✅ FIX: 401 tanpa needsRefresh - tapi check network dulu
+          if (!isNetworkError) {
+            const { useAuthStore } = await import("@/stores/authStore");
+            await useAuthStore().logout();
 
-          if (typeof window !== "undefined" && window.$router) {
-            window.$router.push("/login");
+            if (typeof window !== "undefined" && window.$router) {
+              window.$router.push("/login");
+            }
           }
 
           return Promise.reject(error);
         }
       }
 
-      // Standard error formatting
+      // Standard error formatting (unchanged)
       const apiError = {
         status: error.response?.status || 0,
         message: error.response?.data?.message || error.message || "Request failed",
@@ -217,19 +240,19 @@ export const useApiClient = (token = null) => {
         isNetworkError: isNetworkError,
       };
 
-      // Specific status code messages
+      // Status-specific messages
       switch (error.response?.status) {
         case 401:
           if (isRefreshRequest) {
-            apiError.message = "Refresh token expired or invalid";
+            apiError.message = "Refresh token expired";
           } else if (isVerifyRequest) {
-            apiError.message = "Access token expired or invalid";
+            apiError.message = "Access token expired";
           } else {
-            apiError.message = "Unauthorized. Please login again.";
+            apiError.message = "Unauthorized. Please login.";
           }
           break;
         case 403:
-          apiError.message = "Forbidden. You don't have permission to access this resource.";
+          apiError.message = "Forbidden. No permission.";
           break;
         case 404:
           apiError.message = "Resource not found.";
@@ -238,11 +261,11 @@ export const useApiClient = (token = null) => {
           apiError.message = "Validation failed.";
           break;
         case 500:
-          apiError.message = "Internal server error. Please try again later.";
+          apiError.message = "Server error. Try again.";
           break;
         default:
           if (isNetworkError) {
-            apiError.message = "Network error. Please check your connection.";
+            apiError.message = "Network error. Check connection.";
           }
       }
 

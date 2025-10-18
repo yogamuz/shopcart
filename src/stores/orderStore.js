@@ -234,13 +234,8 @@ export const useOrderStore = defineStore("orders", () => {
 
   const refundedOrders = computed(() => orders.value.filter(order => order.paymentStatus === "refunded"));
   const displayOrder = computed(() => {
-    console.log("🔍 displayOrder computed triggered");
-    console.log("   currentOrder:", currentOrder.value?.id);
-    console.log("   selectedParcelId:", selectedParcelId.value);
-    console.log("   parcels count:", currentOrder.value?.parcels?.length);
 
     if (!currentOrder.value || !selectedParcelId.value) {
-      console.log("   ❌ No filter, returning full order");
       return currentOrder.value;
     }
 
@@ -249,11 +244,9 @@ export const useOrderStore = defineStore("orders", () => {
     );
 
     if (!targetParcel) {
-      console.log("   ❌ Parcel not found:", selectedParcelId.value);
       return currentOrder.value;
     }
 
-    console.log("   ✅ Filtered to parcel:", targetParcel.parcelId);
     return {
       ...currentOrder.value,
       parcels: [targetParcel],
@@ -262,12 +255,10 @@ export const useOrderStore = defineStore("orders", () => {
   });
 
   const setSelectedParcel = parcelId => {
-    console.log("🎯 setSelectedParcel called:", parcelId);
     selectedParcelId.value = parcelId;
   };
 
   const clearSelectedParcel = () => {
-    console.log("🧹 clearSelectedParcel called");
     selectedParcelId.value = null;
   };
 
@@ -448,7 +439,6 @@ export const useOrderStore = defineStore("orders", () => {
       const savedParcelId = keepSelectedParcel ? selectedParcelId.value : null;
 
       const response = await orderService.getOrderById(orderId);
-      console.log("🔍 FETCH ORDER RESPONSE:", JSON.stringify(response.data, null, 2));
       return handleApiResponse(response, data => {
         let normalizedOrder = normalizeOrderData(data);
 

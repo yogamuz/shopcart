@@ -986,7 +986,6 @@ watch(
   () => profile.value,
   newProfile => {
     if (newProfile) {
-      console.log("🔍 Profile updated, refreshing form:", newProfile.storeName);
 
       // Update form with latest profile data
       updateForm.value = {
@@ -1019,7 +1018,6 @@ const unwatchUser = watch(
     const oldUserId = oldUser?._id || oldUser?.id;
 
     if (newUserId !== oldUserId) {
-      console.log("👤 User changed, clearing profile");
 
       // ✅ TAMBAH: Cancel active requests first
       const { cancelActiveRequest } = useSellerProfileStore();
@@ -1040,7 +1038,6 @@ const unwatchInitializing = watch(
   async (isInit, wasInit) => {
     // Ketika initialize selesai dan ada user
     if (wasInit && !isInit && authStore.user?.accessToken) {
-      console.log("🎯 Auth initialization complete, fetching profile");
       await fetchProfile(true);
     }
   }
@@ -1048,12 +1045,10 @@ const unwatchInitializing = watch(
 
 // TAMBAH di onUnmounted (line 495)
 onUnmounted(() => {
-  console.log("👋 SellerProfile unmounting");
   unwatchUser();
   unwatchInitializing(); // ✅ Cleanup
 });
 onMounted(async () => {
-  console.log("✅ SellerProfile mounted");
 
   const authStore = useAuthStore();
 
@@ -1066,19 +1061,15 @@ onMounted(async () => {
 
   // ✅ CRITICAL: Tambah delay agar axios interceptor set token
   if (authStore.user?.accessToken) {
-    console.log("🔄 Auth ready, waiting for token propagation...");
     await new Promise(resolve => setTimeout(resolve, 150)); // ← TAMBAH INI
 
-    console.log("🔄 Fetching profile with token");
     await fetchProfile();
   } else {
-    console.log("⚠️ No valid auth after initialize");
   }
 });
 
 // Cleanup on unmount
 onUnmounted(() => {
-  console.log("👋 SellerProfile unmounting");
   unwatchUser(); // Stop watching user changes
 });
 </script>

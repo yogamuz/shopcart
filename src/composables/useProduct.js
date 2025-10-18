@@ -336,23 +336,13 @@ export const useProductDetail = (route, router) => {
       }
 
       if (isProductLoading.value) {
-        console.log("Product still loading, waiting...");
         return;
       }
 
       if (productQueryData.value?.success) {
         const responseData = productQueryData.value.data;
-        console.log("API Response Data:", responseData);
-        console.log("Related Products Raw:", responseData?.similar || responseData?.relatedProducts);
         relatedProducts.value = responseData?.similar || responseData?.relatedProducts || [];
-        console.log("Related Products After Assignment:", relatedProducts.value);
-        relatedProducts.value.forEach((product, index) => {
-          console.log(`Product ${index}:`, {
-            id: product._id || product.id,
-            slug: product.slug,
-            title: product.title || product.name,
-          });
-        });
+
 
         await loadProductReviews();
       } else if (productQueryData.value && !productQueryData.value.success) {
@@ -474,7 +464,6 @@ const handleReviewsPageChange = async (page) => {
     }
 
     if (routeParam) {
-      console.log("Navigating to product with:", routeParam);
       router.push({ path: `/products/${routeParam}` });
     }
   };
@@ -717,7 +706,6 @@ const handleReviewsPageChange = async (page) => {
       productQueryData,
       async (newData, oldData) => {
         if (newData !== oldData) {
-          console.log("Product query data changed:", newData?.success);
           await loadProductData();
         }
       },
@@ -732,7 +720,6 @@ const handleReviewsPageChange = async (page) => {
       },
       async (newSlug, oldSlug) => {
         if (newSlug !== oldSlug && newSlug) {
-          console.log("Route slug changed:", oldSlug, "->", newSlug);
 
           if (currentProduct.value) {
             previousProduct.value = { ...currentProduct.value };

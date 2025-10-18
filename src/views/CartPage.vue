@@ -190,7 +190,6 @@ const handleImageError = event => {
 // Debounced API update function - will batch rapid clicks
 const debouncedUpdateQuantity = debounce(async (productId, newQuantity) => {
   try {
-    console.log(`Sending API call for ${productId}: ${newQuantity}`);
     const result = await cartStore.updateCartItem(productId, newQuantity);
 
     if (!result.success) {
@@ -349,13 +348,9 @@ watch(
 
 onMounted(async () => {
   try {
-    console.log("Initializing cart from API...");
     await cartStore.initializeCart();
     await nextTick();
-    console.log("Cart initialized:", {
-      count: cartStore.cartCount,
-      items: cartStore.cartItems.length,
-    });
+
   } catch (error) {
     console.error("Failed to initialize cart:", error);
   }

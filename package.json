@@ -11,7 +11,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "test:auth": "vitest test/authStore.spec.js"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.23",

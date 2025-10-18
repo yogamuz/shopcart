@@ -308,14 +308,11 @@ export const useCategoryStore = defineStore("category", {
           normalizedParams
         );
 
-        console.log(`🔍 Checking cache for key: ${cacheKey}`);
 
         // FIXED: Check for cached result with stale-while-revalidate
         const cacheResult = this.shouldUseCache(cacheKey);
         if (cacheResult.use) {
-          console.log(
-            `🚀 Using cached data for: ${categoryIdentifier} (stale: ${cacheResult.stale})`
-          );
+ 
 
           // Restore cached data immediately
           const cachedData = cacheResult.data.data;
@@ -326,9 +323,7 @@ export const useCategoryStore = defineStore("category", {
 
           // If data is stale, fetch in background
           if (cacheResult.stale) {
-            console.log(
-              `🔄 Revalidating stale data for: ${categoryIdentifier}`
-            );
+
             this._executeProductRequest(
               category,
               normalizedParams,
@@ -343,7 +338,6 @@ export const useCategoryStore = defineStore("category", {
 
         // FIXED: Check for pending identical request
         if (this.hasPendingRequest(cacheKey)) {
-          console.log(`⏳ Joining pending request for: ${categoryIdentifier}`);
           return await this.pendingRequests.get(cacheKey);
         }
 
@@ -351,11 +345,7 @@ export const useCategoryStore = defineStore("category", {
         const now = Date.now();
         const lastRequest = this.lastRequestTime.get(cacheKey);
         if (lastRequest && now - lastRequest < this.cacheConfig.debounceTime) {
-          console.log(
-            `🛑 Debouncing request for: ${categoryIdentifier} (${
-              now - lastRequest
-            }ms ago)`
-          );
+
 
           // Return cached data if available during debounce
           const existingCache = this.requestCache.get(cacheKey);
@@ -417,7 +407,6 @@ export const useCategoryStore = defineStore("category", {
         category: category.name.toLowerCase(),
       };
 
-      console.log(`🌐 Making API request for: ${category.name}`, productParams);
 
       const response = await productService.getProducts(productParams);
 
@@ -476,7 +465,6 @@ export const useCategoryStore = defineStore("category", {
           },
         });
 
-        console.log(`💾 Cached response for: ${cacheKey}`);
 
         // Cleanup old cache entries
         this.cleanupCache();
@@ -509,14 +497,10 @@ export const useCategoryStore = defineStore("category", {
           this.pendingRequests.delete(key);
         });
 
-        console.log(
-          `🧹 Cleared cache for category: ${categoryIdentifier} (${keysToDelete.length} entries)`
-        );
       } else {
         this.requestCache.clear();
         this.pendingRequests.clear();
         this.lastRequestTime.clear();
-        console.log(`🧹 Cleared all cache`);
       }
     },
 

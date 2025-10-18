@@ -503,8 +503,6 @@ const userAddresses = computed(() => {
   // addresses sudah berupa ref dari storeToRefs, tidak perlu .value di dalam computed
   const addressList = addresses.value;
   
-  console.log('📍 CheckoutForm - addresses:', addressList);
-  console.log('📍 CheckoutForm - addresses length:', addressList?.length);
   
   return Array.isArray(addressList) ? addressList : [];
 });
@@ -651,9 +649,6 @@ onMounted(async () => {
     await initializeProfile();
     
     // ✅ TAMBAHKAN DEBUG LOG INI
-    console.log('🔍 After initialize - addresses:', addresses.value);
-    console.log('🔍 After initialize - userAddresses:', userAddresses.value);
-    console.log('🔍 ProfileLoading:', profileLoading.value);
 
     if (defaultAddress.value) {
       const defaultIndex = userAddresses.value.findIndex(addr => addr.isDefault);

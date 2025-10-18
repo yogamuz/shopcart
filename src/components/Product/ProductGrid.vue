@@ -197,11 +197,8 @@ const props = defineProps({
 const emit = defineEmits(["toggle-like", "product-click", "add-to-cart"]);
 
 const navigateToProduct = (product) => {
-  console.log('Navigate called with:', product);
-  console.log('Product slug:', product?.slug);
   
   if (product && product.slug) {
-    console.log('Navigating to:', `/products/${product.slug}`);
     router.push({ path: `/products/${product.slug}` });
   } else {
     console.warn('Product or slug missing:', { product: !!product, slug: product?.slug });

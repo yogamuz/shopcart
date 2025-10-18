@@ -43,7 +43,6 @@ export const setupRouterGuards = router => {
 
       // ✅ FIXED: Wait for auth initialization to complete before role check
       if (authStore.isInitializing) {
-        console.log("⏳ Waiting for auth initialization...");
         await new Promise(resolve => {
           const checkInterval = setInterval(() => {
             if (!authStore.isInitializing) {
@@ -63,7 +62,6 @@ export const setupRouterGuards = router => {
       // ✅ FIXED: Add extra delay for mobile to ensure token propagation
       const isMobile = window.innerWidth <= 768;
       if (isMobile && authStore.user?.accessToken) {
-        console.log("📱 Mobile device detected - ensuring token propagation...");
         await new Promise(resolve => setTimeout(resolve, 150));
       }
 
@@ -74,7 +72,6 @@ export const setupRouterGuards = router => {
 
           // Fetch profile if not already loaded or cache is stale
           if (!sellerProfileStore.profile || sellerProfileStore.error) {
-            console.log("Auto-fetching seller profile for dashboard access");
             await sellerProfileStore.fetchProfile();
           }
         } catch (err) {
@@ -91,18 +88,10 @@ export const setupRouterGuards = router => {
 
         // Retry if role is still null (token might not be fully propagated)
         while (!currentRole && retryCount < maxRetries) {
-          console.log(`🔄 Role not ready, retry ${retryCount + 1}/${maxRetries}...`);
           await new Promise(resolve => setTimeout(resolve, 100));
           currentRole = authStore.userRole;
           retryCount++;
         }
-
-        console.log("🔐 Role check:", {
-          requiredRole,
-          currentRole,
-          isAuthenticated: authStore.isAuthenticated,
-          hasToken: !!authStore.user?.accessToken
-        });
 
         // ✅ FIXED: Only block if we're sure role mismatch after retries
         if (requiredRole === "seller" && currentRole !== "seller") {
@@ -133,7 +122,6 @@ export const setupRouterGuards = router => {
       try {
         const sellerProfileStore = useSellerProfileStore();
         sellerProfileStore.clearProfile();
-        console.log("Cleared seller profile on navigation away from seller dashboard");
       } catch (err) {
         console.warn("Failed to clear seller profile:", err);
       }

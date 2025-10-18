@@ -58,7 +58,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       profile.value = profileData;
       lastFetchedUserId.value = currentUserId;
       error.value = null;
-      console.log("✅ Profile set for user:", currentUserId);
     }
   };
 
@@ -72,7 +71,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     isUploadingLogo.value = false;
     isUploadingBanner.value = false;
     uploadProgress.value = 0;
-    console.log("🧹 Seller profile cleared");
   };
 
   const setError = err => {
@@ -87,31 +85,23 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     error.value = null;
   };
 
-  /**
-   * Validate token before fetch
-   * ✅ ADDED: Ensure token is ready before making request
-   */
   const validateTokenReady = async () => {
     const authStore = useAuthStore();
 
-    // Check if we have user with token
-    if (!authStore.user?.accessToken) {
-      console.log("⚠️ No access token available");
+    // ✅ FIX: Use new helper
+    const isReady = await authStore.ensureTokenReady();
+
+    if (!isReady) {
       return false;
     }
 
-    // Give axios interceptor time to set headers
-    await new Promise(resolve => setTimeout(resolve, 50));
-
     return true;
   };
-
   const fetchProfile = async (force = false) => {
     const authStore = useAuthStore();
     const currentUserId = authStore.user?._id || authStore.user?.id;
 
     if (!currentUserId) {
-      console.log("❌ No user ID - cannot fetch profile");
       clearProfile();
       return null;
     }
@@ -119,19 +109,16 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     // ✅ CRITICAL: Validate token is ready
     const tokenReady = await validateTokenReady();
     if (!tokenReady) {
-      console.log("⚠️ Token not ready - skipping fetch");
       return null;
     }
 
     // Check if already loaded
     if (!force && profile.value && lastFetchedUserId.value === currentUserId) {
-      console.log("✅ Profile already loaded for current user");
       return profile.value;
     }
 
     // Clear old profile if user changed
     if (lastFetchedUserId.value && lastFetchedUserId.value !== currentUserId) {
-      console.log("🔄 User changed - clearing old profile");
       clearProfile();
     }
 
@@ -143,35 +130,26 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isLoading.value = true;
       clearError();
 
-      console.log("🔍 Fetching profile:", requestId);
       const response = await sellerProfileService.getProfile();
 
-      // ✅ TAMBAH: Debug full response
-      console.log("🔍 Full response:", response);
-      console.log("🔍 Response.data:", response.data);
-      console.log("🔍 Response.data.userId:", response.data?.userId);
+
 
       if (activeRequestId.value !== requestId) {
-        console.log("⚠️ Request cancelled:", requestId);
         return null;
       }
 
       const stillCurrentUser = authStore.user?._id || authStore.user?.id;
       if (currentUserId !== stillCurrentUser) {
-        console.log("⚠️ User changed during request - discarding");
         return null;
       }
 
       // ✅ CRITICAL: Validate response userId matches
       if (response.success && response.data) {
-        console.log("🔍 Response validation - response.data:", response.data);
-        console.log("🔍 Type of response.data:", typeof response.data);
-        console.log("🔍 Keys in response.data:", Object.keys(response.data));
+
 
         const responseUserId = response.data.userId || response.data.owner?.id;
 
-        console.log("🔍 Extracted responseUserId:", responseUserId);
-        console.log("🔍 Expected currentUserId:", currentUserId);
+
 
         if (responseUserId !== currentUserId) {
           console.error("❌ Profile userId mismatch!");
@@ -181,7 +159,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
         }
 
         setProfile(response.data);
-        console.log("✅ Profile fetched:", requestId);
         return response.data;
       }
 
@@ -213,7 +190,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
   // ✅ TAMBAH: Method untuk cancel request
   const cancelActiveRequest = () => {
     if (activeRequestId.value) {
-      console.log("🚫 Cancelling active request:", activeRequestId.value);
       activeRequestId.value = null;
     }
   };
@@ -237,13 +213,11 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isCreating.value = true;
       clearError();
 
-      console.log("🏪 Creating profile for user:", currentUserId);
       const response = await sellerProfileService.createProfile(profileData);
 
       // ✅ CRITICAL: Validate user hasn't changed during request
       const stillCurrentUser = authStore.user?._id || authStore.user?.id;
       if (requestUserId !== stillCurrentUser) {
-        console.log("⚠️ User changed during create - discarding result");
         return null;
       }
 
@@ -256,7 +230,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
         }
 
         setProfile(response.data);
-        console.log("✅ Profile created successfully");
         return response.data;
       }
 
@@ -279,11 +252,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     }
   };
 
-  /**
-   * Update seller profile
-   * Real-time update without page refresh
-   * ✅ FIXED: Added user validation to prevent race conditions
-   */
   const updateProfile = async updates => {
     const authStore = useAuthStore();
     const currentUserId = authStore.user?._id || authStore.user?.id;
@@ -303,13 +271,11 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isUpdating.value = true;
       clearError();
 
-      console.log("🔄 Updating profile for user:", currentUserId);
       const response = await sellerProfileService.updateProfile(updates);
 
       // ✅ CRITICAL: Validate user hasn't changed during request
       const stillCurrentUser = authStore.user?._id || authStore.user?.id;
       if (requestUserId !== stillCurrentUser) {
-        console.log("⚠️ User changed during update - discarding result");
         return null;
       }
 
@@ -323,7 +289,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
 
         // Real-time update - immediately reflect changes
         setProfile(response.data);
-        console.log("✅ Profile updated successfully");
         return response.data;
       }
 
@@ -370,7 +335,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       uploadProgress.value = 0;
       clearError();
 
-      console.log("📸 Uploading logo for user:", currentUserId);
 
       const response = await sellerProfileService.uploadLogo(file, progressEvent => {
         // ✅ Only update progress if still same user
@@ -383,7 +347,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       // ✅ CRITICAL: Validate user hasn't changed during upload
       const stillCurrentUser = authStore.user?._id || authStore.user?.id;
       if (requestUserId !== stillCurrentUser) {
-        console.log("⚠️ User changed during logo upload - discarding result");
         return null;
       }
 
@@ -397,7 +360,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
 
         // Real-time update - immediately show new logo
         setProfile(response.data);
-        console.log("✅ Logo uploaded successfully");
         return response.data;
       }
 
@@ -445,7 +407,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       uploadProgress.value = 0;
       clearError();
 
-      console.log("📸 Uploading banner for user:", currentUserId);
 
       const response = await sellerProfileService.uploadBanner(file, progressEvent => {
         // ✅ Only update progress if still same user
@@ -458,7 +419,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       // ✅ CRITICAL: Validate user hasn't changed during upload
       const stillCurrentUser = authStore.user?._id || authStore.user?.id;
       if (requestUserId !== stillCurrentUser) {
-        console.log("⚠️ User changed during banner upload - discarding result");
         return null;
       }
 
@@ -472,7 +432,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
 
         // Real-time update - immediately show new banner
         setProfile(response.data);
-        console.log("✅ Banner uploaded successfully");
         return response.data;
       }
 
@@ -511,12 +470,10 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isUpdating.value = true;
       clearError();
 
-      console.log("📦 Archiving profile for user:", currentUserId);
       const response = await sellerProfileService.archiveProfile();
 
       if (response.success && response.data) {
         setProfile(response.data);
-        console.log("✅ Profile archived successfully");
         return response.data;
       }
 
@@ -545,12 +502,10 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isUpdating.value = true;
       clearError();
 
-      console.log("♻️ Restoring profile for user:", currentUserId);
       const response = await sellerProfileService.restoreProfile();
 
       if (response.success && response.data) {
         setProfile(response.data);
-        console.log("✅ Profile restored successfully");
         return response.data;
       }
 
@@ -579,12 +534,10 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isLoading.value = true;
       clearError();
 
-      console.log("🗑️ Deleting profile for user:", currentUserId);
       const response = await sellerProfileService.deleteProfile();
 
       if (response.success) {
         clearProfile();
-        console.log("✅ Profile deleted successfully");
         return true;
       }
 

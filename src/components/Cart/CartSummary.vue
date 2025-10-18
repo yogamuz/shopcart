@@ -244,7 +244,6 @@ const handleProceedToCheckout = async () => {
   }
 
   try {
-    console.log('🛒 Proceeding to checkout with API data...');
     
     // Directly emit to show checkout modal
     emit('proceedToCheckout');

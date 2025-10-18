@@ -1,4 +1,4 @@
-// stores/authStore.js - Optimized version (less API calls)
+// stores/authStore.js - Fixed version (minimal changes)
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { authService } from "@/services/authService";
@@ -7,13 +7,14 @@ import { queryClient } from "@/main.js";
 export const useAuthStore = defineStore("auth", () => {
   // State
   const user = ref(JSON.parse(localStorage.getItem("user") || "null"));
+  const accessToken = ref(null);
   const isLoading = ref(false);
   const error = ref(null);
   const isInitializing = ref(false);
   const lastVerified = ref(localStorage.getItem("lastVerified") || null);
 
   // Getters
-  const isAuthenticated = computed(() => !!user.value);
+  const isAuthenticated = computed(() => !!user.value && !!accessToken.value);
   const userRole = computed(() => user.value?.role || null);
   const isUser = computed(() => userRole.value === "user");
   const isSeller = computed(() => userRole.value === "seller");
@@ -28,21 +29,66 @@ export const useAuthStore = defineStore("auth", () => {
     return Date.now() - parseInt(lastVerified.value) < fiveMinutes;
   };
 
+  const isTokenNearExpiry = () => {
+    if (!accessToken.value) return true;
+
+    try {
+      // Decode JWT tanpa verify (hanya baca payload)
+      const base64Url = accessToken.value.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(window.atob(base64));
+
+      const expiryTime = payload.exp * 1000; // Convert to milliseconds
+      const now = Date.now();
+      const twoMinutes = 2 * 60 * 1000;
+
+      return expiryTime - now < twoMinutes;
+    } catch (err) {
+      console.warn("Failed to decode token:", err);
+      return true; // Assume expired if can't decode
+    }
+  };
+
+  // ✅ FIX: Helper untuk validasi refresh cookie dengan value check
+  const hasValidRefreshCookie = () => {
+    if (typeof document === "undefined") return false;
+    
+    const cookies = document.cookie.split(";");
+    return cookies.some(cookie => {
+      const trimmed = cookie.trim();
+      
+      // Check if it's a refresh token cookie
+      if (trimmed.startsWith("refreshToken=") || trimmed.startsWith("refresh_token=")) {
+        // ✅ FIX: Extract and validate the value
+        const cookieValue = trimmed.split("=")[1];
+        return cookieValue && cookieValue.length > 10; // Must have actual value
+      }
+      
+      return false;
+    });
+  };
+
   // Actions
   const setAuth = userData => {
-    user.value = userData;
+
+
+    const { accessToken: token, ...userDataOnly } = userData;
+
+    user.value = userDataOnly;
+    accessToken.value = token;
     error.value = null;
 
-    // Simpan user ke localStorage untuk persist after refresh
-    if (userData) {
-      localStorage.setItem("user", JSON.stringify(userData));
+    if (userDataOnly) {
+      localStorage.setItem("user", JSON.stringify(userDataOnly));
       localStorage.setItem("lastVerified", Date.now().toString());
       lastVerified.value = Date.now().toString();
+
     }
   };
 
   const clearAuth = () => {
     user.value = null;
+    accessToken.value = null;
     error.value = null;
     isInitializing.value = false;
     lastVerified.value = null;
@@ -50,16 +96,8 @@ export const useAuthStore = defineStore("auth", () => {
     localStorage.removeItem("user");
     localStorage.removeItem("lastVerified");
 
-    // Clear TanStack Query cache
     try {
-      const queryClient = useQueryClient();
       queryClient.clear();
-    } catch (err) {
-      console.warn("Failed to clear query cache:", err);
-    }
-
-    try {
-      queryClient.clear(); // ✅ Langsung pakai imported queryClient
     } catch (err) {
       console.warn("Failed to clear query cache:", err);
     }
@@ -87,20 +125,18 @@ export const useAuthStore = defineStore("auth", () => {
       const response = await authService.login(credentials);
 
       if (response.success) {
-        const userData = {
+        setAuth({
           ...response.user,
           accessToken: response.accessToken,
-        };
-
-        setAuth(userData);
+        });
 
         try {
-          await queryClient.clear(); // ✅ Langsung pakai imported queryClient
+          await queryClient.clear();
         } catch (err) {
           console.warn("Failed to clear cache on login:", err);
         }
 
-        return { success: true, user: userData };
+        return { success: true, user: user.value };
       }
 
       throw new Error(response.message || "Login failed");
@@ -112,7 +148,6 @@ export const useAuthStore = defineStore("auth", () => {
     }
   };
 
-  // Fixed register method in authStore.js
   const register = async userData => {
     try {
       setLoading(true);
@@ -121,14 +156,12 @@ export const useAuthStore = defineStore("auth", () => {
       const response = await authService.register(userData);
 
       if (response.success) {
-        // FIXED: Store the access token along with user data
-        const userDataWithToken = {
+        setAuth({
           ...response.user,
-          accessToken: response.accessToken, // Add this line
-        };
+          accessToken: response.accessToken,
+        });
 
-        setAuth(userDataWithToken);
-        return { success: true, user: userDataWithToken };
+        return { success: true, user: user.value };
       }
 
       throw new Error(response.message || "Registration failed");
@@ -150,19 +183,17 @@ export const useAuthStore = defineStore("auth", () => {
       setLoading(false);
     }
   };
-  // Replace the existing logout method with this:
 
   const logout = async () => {
     try {
       setLoading(true);
       isInitializing.value = false;
 
-      // ✅ CRITICAL: Clear seller profile store FIRST before clearing auth
+      // Clear seller profile store FIRST before clearing auth
       try {
         const { useSellerProfileStore } = await import("@/stores/sellerProfileStore");
         const sellerProfileStore = useSellerProfileStore();
         sellerProfileStore.clearProfile();
-        console.log("✅ Seller profile cleared");
       } catch (err) {
         console.warn("Failed to clear seller profile:", err);
       }
@@ -177,7 +208,6 @@ export const useAuthStore = defineStore("auth", () => {
       // Clear TanStack Query cache
       try {
         await queryClient.clear();
-        console.log("✅ Cache cleared after logout");
       } catch (err) {
         console.warn("Failed to clear query cache:", err);
       }
@@ -185,7 +215,6 @@ export const useAuthStore = defineStore("auth", () => {
       // Logout API call (best effort)
       try {
         await authService.logout();
-        console.log(`✅ User ${tempUser?.username} logged out successfully`);
       } catch (err) {
         console.warn("Logout API call failed (non-blocking):", err);
       }
@@ -199,74 +228,62 @@ export const useAuthStore = defineStore("auth", () => {
       }
     }
   };
-// FILE: stores/authStore.js
-// GANTI METHOD "refreshToken" LENGKAP
 
+  let refreshPromise = null;
 const refreshToken = async () => {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
   try {
-    // Skip refresh jika tidak ada indikasi token atau fresh verification
-    if (!user.value && !isVerificationFresh()) {
-      console.log("No user or fresh verification - skipping refresh");
-      return false;
-    }
-
-    // Check if we have cookies before attempting refresh
-    if (typeof document !== "undefined") {
-      const hasCookies = document.cookie
-        .split(";")
-        .some(cookie => cookie.trim().startsWith("refreshToken=") || cookie.trim().startsWith("refresh_token="));
-
-      if (!hasCookies && !user.value) {
-        console.log("No refresh token cookie found - skipping refresh");
-        return false;
-      }
-    }
-
-    console.log("🔄 Attempting token refresh...");
-    const response = await authService.refresh();
-
-    if (response.success) {
-      console.log("✅ Token refresh successful");
-      const userData = {
-        ...response.user,
-        accessToken: response.accessToken,
-      };
-
-      setAuth(userData);
+    // Skip refresh if token still valid
+    if (accessToken.value && !isTokenNearExpiry() && isVerificationFresh()) {
       return true;
     }
 
-    console.log("❌ Refresh response not successful:", response);
+
+    // ✅ FIX: Just call refresh, backend validates refresh cookie
+    // No client-side cookie check needed
+    refreshPromise = authService.refresh();
+    const response = await refreshPromise;
+
+    if (response.success) {
+
+      setAuth({
+        ...response.user,
+        accessToken: response.accessToken,
+      });
+
+      return true;
+    }
+
     return false;
   } catch (err) {
-    // Detect network error vs auth error
-    const isNetworkError = !err.status || err.code === "ECONNABORTED" || err.code === "ENOTFOUND";
+    const isNetworkError = !err.status || err.code === "ECONNABORTED" || err.code === "ERR_NETWORK";
 
     if (err.status === 400 || err.status === 401) {
-      console.log("🔄 Refresh token expired or invalid - clearing auth");
       clearAuth();
     } else if (isNetworkError) {
-      // Network error - jangan clear auth, biarkan user retry
-      console.warn("Token refresh failed (network error):", err.message);
+      console.warn("⚠️ Network error on refresh - keeping session:", err.message);
       return false;
     } else {
-      console.warn("Token refresh failed:", err);
+      console.warn("⚠️ Refresh error:", err);
+      return false;
     }
+
     return false;
+  } finally {
+    refreshPromise = null;
   }
 };
 
-  // Fixed verifyToken method in authStore.js
   const verifyToken = async (force = false) => {
-    // Skip verification jika masih fresh dan tidak dipaksa
     if (!force && isVerificationFresh()) {
-      console.log("Verification still fresh - skipping");
       return { success: true, user: user.value };
     }
 
-    // FIXED: Skip verify if no access token available
-    if (!user.value?.accessToken) {
-      console.log("No access token available - skipping verify");
+    // Check in-memory token
+    if (!accessToken.value) {
       return false;
     }
 
@@ -274,27 +291,23 @@ const refreshToken = async () => {
       setLoading(true);
       clearError();
 
-      console.log("🔍 Verifying access token...");
       const response = await authService.verify();
 
       if (response.success) {
-        console.log("✅ Token verification successful");
-        // Store the access token if provided in response
-        const userData = response.accessToken
-          ? { ...response.user, accessToken: response.accessToken }
-          : { ...response.user, accessToken: user.value.accessToken }; // Keep existing token
 
-        setAuth(userData);
-        return { success: true, user: userData };
+        // CRITICAL FIX: Verify endpoint doesn't return accessToken, keep existing token
+        setAuth({
+          ...response.user,
+          accessToken: accessToken.value, // Keep existing token!
+        });
+
+        return { success: true, user: user.value };
       }
 
       throw new Error(response.message || "Token verification failed");
     } catch (err) {
-      console.log("🔍 Token verification failed:", err.message);
 
-      // FIXED: Only clear auth if it's actually invalid, not network error
       if (err.status === 401 || err.status === 403) {
-        console.log("🔍 Access token invalid - clearing auth");
         clearAuth();
       }
 
@@ -334,36 +347,26 @@ const refreshToken = async () => {
     }
   };
 
-  /**
- * Change password
- */
-const changePassword = async (currentPassword, newPassword, confirmPassword) => {
-  try {
-    setLoading(true);
-    clearError();
+  const changePassword = async (currentPassword, newPassword, confirmPassword) => {
+    try {
+      setLoading(true);
+      clearError();
 
-    console.log("🔐 Changing password...");
-    const response = await authService.changePassword(
-      currentPassword,
-      newPassword,
-      confirmPassword
-    );
+      const response = await authService.changePassword(currentPassword, newPassword, confirmPassword);
 
-    if (response.success) {
-      console.log("✅ Password changed successfully");
-      return { success: true, message: response.message };
+      if (response.success) {
+        return { success: true, message: response.message };
+      }
+
+      throw new Error(response.message || "Failed to change password");
+    } catch (err) {
+      console.error("❌ Change password error:", err);
+      setError(err.message || "Failed to change password");
+      throw err;
+    } finally {
+      setLoading(false);
     }
-
-    throw new Error(response.message || "Failed to change password");
-  } catch (err) {
-    console.error("❌ Change password error:", err);
-    setError(err.message || "Failed to change password");
-    throw err;
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const checkUsernameAvailability = async username => {
     try {
@@ -377,95 +380,105 @@ const changePassword = async (currentPassword, newPassword, confirmPassword) => 
     }
   };
 
-  // Fixed initialize method - ADD THIS AFTER LINE 290
-  const initialize = async () => {
-    if (isInitializing.value) {
-      console.log("Already initializing - skipping");
-      return;
-    }
-
-    // Skip initialize jika user baru logout
+  const canSkipInitialization = () => {
+    // Only skip if just logged out
     if (sessionStorage.getItem("justLoggedOut")) {
       sessionStorage.removeItem("justLoggedOut");
-      console.log("Skipping auth init - user just logged out");
-      return;
+      return true;
     }
 
-    isInitializing.value = true;
+    return false;
+  };
 
+  let initializePromise = null;
+
+const initialize = async () => {
+  if (initializePromise) {
+    return initializePromise;
+  }
+
+  if (isInitializing.value) {
+    return;
+  }
+
+  if (canSkipInitialization()) {
+    return;
+  }
+
+  isInitializing.value = true;
+
+  initializePromise = (async () => {
     try {
-      console.log("🚀 Initializing auth state...");
 
-      // Jika ada user di localStorage dan verification masih fresh
-      if (user.value && isVerificationFresh()) {
-        console.log("✅ Using cached auth state (still fresh)");
-        return;
+      // Load user from localStorage FIRST
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          user.value = JSON.parse(storedUser);
+        } catch (e) {
+          console.warn("⚠️  Failed to parse stored user:", e);
+          localStorage.removeItem("user");
+        }
       }
 
-      const hasStoredUser = user.value != null;
-      const hasLastVerified = lastVerified.value != null;
-
-      let hasCookies = false;
-      if (typeof document !== "undefined") {
-        hasCookies = document.cookie
-          .split(";")
-          .some(cookie => cookie.trim().startsWith("refreshToken=") || cookie.trim().startsWith("refresh_token="));
-      }
-
-      // If no indication of previous session, stay in guest mode
-      if (!hasStoredUser && !hasLastVerified && !hasCookies) {
-        console.log("✅ No previous session found - staying in guest mode");
-        return;
-      }
-
-      // If we have user but verification expired, try to verify first
-      if (hasStoredUser && user.value?.accessToken) {
-        console.log("🔍 Stored user found - token ready");
-
-        // ✅ CRITICAL: Ensure token propagates to axios
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        console.log("📌 Token propagated to axios interceptor");
-        return;
-      }
-
-      // Only try refresh if we have some indication of valid session
-      if (hasCookies || hasLastVerified) {
-        console.log("🔄 Trying to refresh token...");
+      
+      if (storedUser) {
+        
         const refreshed = await refreshToken();
 
-        // Di akhir initialize function, SEBELUM finally
         if (refreshed) {
-          console.log("✅ Token refresh successful");
           await new Promise(resolve => setTimeout(resolve, 100));
-
-          // ✅ TAMBAH: Log token status
-          console.log("📌 Token ready:", {
-            hasUser: !!user.value,
-            hasToken: !!user.value?.accessToken,
-          });
-
           return;
         } else {
-          console.log("❌ Token refresh failed - clearing auth state");
           clearAuth();
         }
       } else {
-        console.log("❌ No refresh token available - clearing auth state");
-        clearAuth();
+        // No stored user = guest mode or first time
       }
+
     } catch (err) {
-      console.warn("Auth initialization failed:", err);
-      clearAuth();
+      console.error("❌ Init error:", err);
+      
+      if (err.status === 401 || err.status === 403) {
+        clearAuth();
+      } else if (!err.isNetworkError) {
+        console.warn("⚠️  Unknown error - clearing auth to be safe");
+        clearAuth();
+      } else {
+        console.warn("📡 Network error - keeping session for retry");
+      }
     } finally {
       isInitializing.value = false;
-      console.log("🏁 Auth initialization complete");
+      initializePromise = null;
+
     }
+  })();
+
+  return initializePromise;
+};
+
+  const ensureTokenReady = async (maxWait = 5000) => {
+    const startTime = Date.now();
+
+    while (!accessToken.value && Date.now() - startTime < maxWait) {
+      if (isInitializing.value) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } else {
+        // Initialization done but no token
+        break;
+      }
+    }
+
+    const waitTime = Date.now() - startTime;
+
+
+    return !!accessToken.value;
   };
 
   return {
     // State
     user,
+    accessToken,
     isLoading,
     error,
 
@@ -496,5 +509,7 @@ const changePassword = async (currentPassword, newPassword, confirmPassword) => 
     changePassword,
     checkUsernameAvailability,
     initialize,
+    ensureTokenReady,
+    isTokenNearExpiry,
   };
 });

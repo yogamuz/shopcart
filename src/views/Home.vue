@@ -111,7 +111,6 @@ const handleCategorySelected = (category) => {
   categoryFilter.value = categoryName;
   selectedCategory.value = category;
   
-  console.log('Category selected in Home:', category);
   
   // Clear any existing filters when switching categories
   searchQuery.value = "";
@@ -224,7 +223,6 @@ const fetchProductsData = async () => {
       params.limit = currentFilters.value.limit;
     }
     
-    console.log('Fetching products with params:', params);
     await fetchProducts(params);
     
   } catch (error) {

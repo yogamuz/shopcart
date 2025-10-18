@@ -119,56 +119,47 @@ const lastSeenFormatted = computed(() => {
   /**
    * Fetch user profile
    */
-  /**
-   * Fetch user profile
-   */
-  const fetchProfile = async (forceRefresh = false) => {
-    // Skip jika sudah ada data dan tidak force refresh
-    if (!forceRefresh && profile.value && !loading.value) {
-      return { success: true, data: { profile: profile.value } };
+const fetchProfile = async (forceRefresh = false) => {
+  if (!forceRefresh && profile.value && !loading.value) {
+    return { success: true, data: { profile: profile.value } };
+  }
+
+  if (loading.value && !forceRefresh) return;
+
+  try {
+    setLoading(true);
+    clearError();
+
+    const result = await userProfileService.getProfile();
+
+    if (result.success) {
+      profile.value = result.data.profile;
+
+      // ✅ FIX: Cek apakah response include addresses
+      if (result.data.addresses?.list) {
+        // Backend return addresses → langsung set
+        addresses.value = result.data.addresses.list;
+      } else {
+        // Backend tidak return addresses → perlu fetch terpisah
+      }
+
+      return result;
     }
+  } catch (err) {
+    console.error("Error fetching profile:", err);
+    setError(err.message || "Failed to load profile");
 
-    if (loading.value && !forceRefresh) return;
-
-    try {
-      setLoading(true);
+    if (err.status === 404 || err.message?.includes("not found")) {
+      profile.value = null;
+      addresses.value = [];
       clearError();
-
-      const result = await userProfileService.getProfile();
-
-      // ✅ TAMBAHKAN LOG DEBUG
-      console.log("📦 fetchProfile result:", result);
-      console.log("📦 result.data:", result.data);
-      console.log("📦 result.data.profile:", result.data.profile);
-      console.log("📦 result.data.profile.addresses:", result.data.profile?.addresses);
-
-      if (result.success) {
-        profile.value = result.data.profile;
-
-        // ✅ PERBAIKAN: Jangan set addresses dari profile response
-        // Karena addresses harus di-fetch terpisah
-        // HAPUS BAGIAN INI:
-        // if (result.data.profile?.addresses) {
-        //   addresses.value = result.data.profile.addresses.list || [];
-        // }
-
-        return result;
-      }
-    } catch (err) {
-      console.error("Error fetching profile:", err);
-      setError(err.message || "Failed to load profile");
-
-      if (err.status === 404 || err.message?.includes("not found")) {
-        profile.value = null;
-        addresses.value = [];
-        clearError();
-      }
-
-      throw err;
-    } finally {
-      setLoading(false);
     }
-  };
+
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
 
   /**
    * Create user profile
@@ -224,8 +215,6 @@ const lastSeenFormatted = computed(() => {
         // ✅ TAMBAHKAN: Deep clone untuk force reactivity
         profile.value = JSON.parse(JSON.stringify(result.data.profile));
 
-        console.log("✅ Profile updated in store:", profile.value);
-        console.log("✅ Date of birth:", profile.value.dateOfBirth);
 
         if (result.data.profile?.addresses) {
           addresses.value = result.data.profile.addresses.list || [];
@@ -300,7 +289,6 @@ const lastSeenFormatted = computed(() => {
         uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
       });
 
-      console.log("📤 Upload result:", result);
 
       if (result.success) {
         const profileData = result.data.profile;
@@ -315,7 +303,6 @@ const lastSeenFormatted = computed(() => {
             profile.value = profileData;
           }
 
-          console.log("✅ Avatar updated in store:", profile.value.avatar);
         }
 
         // ✅ Invalidate query jika queryClient tersedia
@@ -345,7 +332,6 @@ const lastSeenFormatted = computed(() => {
 
       const result = await userProfileService.removeAvatar();
 
-      console.log("🗑️ Remove avatar result:", result);
 
       if (result.success) {
         const profileData = result.data.profile;
@@ -360,7 +346,6 @@ const lastSeenFormatted = computed(() => {
             profile.value = profileData;
           }
 
-          console.log("✅ Avatar removed from store:", profile.value.avatar);
         }
 
         // ✅ Invalidate query jika queryClient tersedia
@@ -409,46 +394,38 @@ const lastSeenFormatted = computed(() => {
   /**
    * Fetch user addresses
    */
-  const fetchAddresses = async (forceRefresh = false) => {
-    // ✅ Tambahkan parameter forceRefresh
-    if (!forceRefresh && addresses.value.length > 0 && !loading.value) {
-      console.log("✅ Addresses already loaded:", addresses.value.length);
-      return { success: true, data: { addresses: { list: addresses.value } } };
-    }
+const fetchAddresses = async (forceRefresh = false) => {
+  // ✅ Skip jika sudah ada addresses dari profile response
+  if (!forceRefresh && addresses.value.length > 0 && !loading.value) {
+    return { success: true, data: { addresses: { list: addresses.value } } };
+  }
 
-    try {
-      setLoading(true);
-      clearError();
+  try {
+    setLoading(true);
+    clearError();
 
-      const result = await userProfileService.getAddresses();
+    const result = await userProfileService.getAddresses();
 
-      // ✅ TAMBAHKAN LOG DEBUG
-      console.log("📦 fetchAddresses result:", result);
-      console.log("📦 result.data:", result.data);
-      console.log("📦 result.data.addresses:", result.data.addresses);
-
-      if (result.success) {
-        addresses.value = result.data.addresses?.list || [];
-
-        // ✅ LOG FINAL
-        console.log("✅ Addresses set to store:", addresses.value);
-
+    if (result.success) {
+      addresses.value = result.data.addresses?.list || [];
         return result;
-      }
-    } catch (err) {
-      console.error("Error fetching addresses:", err);
-      setError(err.message || "Failed to load addresses");
-
-      if (err.status === 404 || err.message?.includes("not found")) {
-        addresses.value = [];
-        clearError();
-      }
-
-      throw err;
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Error fetching addresses:", err);
+    setError(err.message || "Failed to load addresses");
+
+    if (err.status === 404 || err.message?.includes("not found")) {
+      addresses.value = [];
+      clearError();
+    }
+
+    throw err;
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   /**
    * Add new address
@@ -592,15 +569,22 @@ const lastSeenFormatted = computed(() => {
   /**
    * Initialize store (fetch profile and addresses)
    */
-  const initialize = async () => {
-    try {
-      await fetchProfile();
-      await fetchAddresses();
-    } catch (err) {
-      console.error("Error initializing profile store:", err);
-      // Don't throw error here - let components handle individual failures
+const initialize = async () => {
+  try {
+    // 1. Fetch profile dulu
+    await fetchProfile(true);
+
+    // 2. Cek apakah addresses sudah di-set dari profile response
+    if (addresses.value.length === 0) {
+      // Belum ada addresses → fetch terpisah
+      await fetchAddresses(true);
     }
-  };
+    // Jika sudah ada, skip fetch addresses terpisah
+
+  } catch (err) {
+    console.error("Error initializing profile store:", err);
+  }
+};
 
   return {
     // State
