@@ -49,7 +49,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/authStore";
 import Sidebar from "@/components/User/Sidebar.vue";
 import Header from "@/components/User/UserDashboardHeader.vue";
 import UserDashboardOverview from "@/components/User/UserDashboardOverview.vue";
@@ -58,19 +60,64 @@ import UserAddresses from "@/components/User/UserAddresses.vue";
 import UserWallet from "@/components/User/UserWallet.vue";
 import UserSettings from "@/components/User/UserSettings.vue";
 
+const router = useRouter();
+const authStore = useAuthStore();
+
 // Reactive state with responsive detection
 const sidebarCollapsed = ref(false);
 const isMobile = ref(false);
 const activeNav = ref("Dashboard");
+const isLoading = ref(true);
+
+// ✅ Route protection - wait for token ready
+onMounted(async () => {
+  try {
+    // Wait for token to be ready (max 5 seconds)
+    const hasToken = await authStore.ensureTokenReady(5000);
+    
+    if (!hasToken || !authStore.isAuthenticated) {
+      console.warn("⚠️ User not authenticated, redirecting to login");
+      await router.push("/login");
+      return;
+    }
+    
+    console.log("✅ Dashboard access granted");
+    isLoading.value = false;
+    
+    // Responsive setup
+    window.addEventListener("resize", handleResize);
+    checkScreenSize();
+  } catch (err) {
+    console.error("Dashboard init error:", err);
+    await router.push("/login");
+  }
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+});
+
+// ✅ Watch for logout
+watch(
+  () => authStore.isAuthenticated,
+  (newValue) => {
+    if (!newValue) {
+      console.warn("⚠️ Auth lost, redirecting to login");
+      router.push("/login");
+    }
+  }
+);
 
 // Responsive detection
 const checkScreenSize = () => {
-  isMobile.value = window.innerWidth < 1024; // LG breakpoint
-
-  // Auto-collapse sidebar on mobile/tablet
+  isMobile.value = window.innerWidth < 1024;
   if (isMobile.value) {
     sidebarCollapsed.value = true;
   }
+};
+
+const handleResize = () => {
+  checkScreenSize();
 };
 
 // Helper functions
@@ -91,39 +138,12 @@ const toggleSidebar = () => {
 };
 
 const handleNavClick = navName => {
-  try {
-
-    // Prevent self-assignment if already on the same page
-    if (activeNav.value === navName) {
-      return;
-    }
-
-    // Update active navigation
-    activeNav.value = navName;
-
-    // Auto-collapse sidebar on mobile after navigation
-    if (isMobile.value) {
-      sidebarCollapsed.value = true;
-    }
-  } catch (error) {
-    console.error("Error in handleNavClick:", error);
+  if (activeNav.value === navName) return;
+  activeNav.value = navName;
+  if (isMobile.value) {
+    sidebarCollapsed.value = true;
   }
 };
-
-// Resize handler
-const handleResize = () => {
-  checkScreenSize();
-};
-
-// Lifecycle hooks
-onMounted(() => {
-  window.addEventListener("resize", handleResize);
-  checkScreenSize(); // Initial check
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", handleResize);
-});
 </script>
 
 <style scoped>
