@@ -3,20 +3,20 @@
     <NavDropdown :categories="categories" @select-category="$emit('select-category', $event)" />
 <a href="#deals"
   @click.prevent="scrollToDeals"
-  class="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200 cursor-pointer"
+  class="text-white  hover:text-blue-600 font-medium transition-colors duration-200 cursor-pointer"
 >
   Deals
 </a>
 <router-link
   to="/orders"
-  class="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+  class="text-white  hover:text-blue-600 font-medium transition-colors duration-200"
 >
   Orders
 </router-link>
 
     <router-link
       to="#"
-      class="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+      class="text-white  hover:text-blue-600 font-medium transition-colors duration-200"
     >
       Delivery
     </router-link>

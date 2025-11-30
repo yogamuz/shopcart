@@ -7,7 +7,7 @@
       <button
         v-if="isAuthenticated"
         @click="toggleAccountMenu"
-        class="hidden sm:flex items-center space-x-3 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+        class="hidden sm:flex items-center space-x-3 text-white hover:text-blue-600 transition-colors duration-200"
       >
         <!-- Avatar Circle - Prioritize avatarUrl from profile -->
         <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-md overflow-hidden">
@@ -49,7 +49,7 @@
       <button
         v-else
         @click="toggleAccountMenu"
-        class="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+        class="hidden sm:flex items-center space-x-2 text-white hover:text-blue-600 transition-colors duration-200"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -90,7 +90,7 @@
           <div v-if="!isAuthenticated">
             <button
               @click="handleNavigation('/login')"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +106,7 @@
             </button>
             <button
               @click="handleNavigation('/register')"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,14 +124,14 @@
 
           <!-- If authenticated -->
           <div v-else>
-            <div class="px-4 py-2 text-sm text-gray-500 border-b border-gray-200">
+            <div class="px-4 py-2 text-sm text-white border-b border-gray-200">
               <div class="font-medium">{{ getUserDisplayName() }}</div>
               <div class="text-xs">{{ user?.email }}</div>
             </div>
             <button
               v-if="!isAdmin"
               @click="handleNavigation('/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +150,7 @@
             <button
               v-if="isSeller"
               @click="handleNavigation('/seller/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@
             <button
               v-if="isAdmin"
               @click="handleNavigation('/admin/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,7 @@
     <div class="relative">
       <button
         @click="handleNavigation('/cart')"
-        class="hidden sm:flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors duration-200 relative"
+        class="hidden sm:flex items-center space-x-2 text-white hover:text-blue-600 transition-colors duration-200 relative"
       >
         <div class="relative">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +243,7 @@
     <!-- Mobile Menu Button -->
     <button
       @click.stop="$emit('toggle-mobile-menu')"
-      class="md:hidden flex items-center text-gray-700 hover:text-blue-600 ml-2"
+      class="md:hidden flex items-center text-white hover:text-blue-600 ml-2"
     >
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />

@@ -20,7 +20,7 @@
           v-model="searchQuery"
           type="text"
           placeholder="Search Product"
-          class="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
+          class="w-full pl-4 pr-10 py-2 bg-white/90 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm text-gray-700 placeholder:text-gray-400"
           @input="handleInput"
           @keydown="handleKeyDown"
           @focus="showSuggestions = true"
@@ -120,7 +120,7 @@
 </template>
 
 <script setup>
-import { ref, watch,computed } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useSearch } from "@/composables/useSearch";
 import { debounce } from "lodash";

@@ -1,7 +1,7 @@
 <!-- header.vue -->
 
 <template>
-<header id="header" class="fixed top-0 left-0 right-0 z-40 bg-[#004030] py-2 lg:py-2 text-white text-xs sm:text-sm">
+<header class="fixed top-0 left-0 right-0 z-50 py-2 lg:py-2 bg-slate-900/90 backdrop-blur-md shadow-lg text-xs sm:text-sm text-white">
 
     <div class="container mx-auto px-3 sm:px-4 lg:px-36">
       <div class="flex items-center justify-between gap-2 sm:gap-4">

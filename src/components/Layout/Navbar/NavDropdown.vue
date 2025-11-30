@@ -4,7 +4,7 @@
     <button
       @click.stop="toggleDropdown"
       data-dropdown-trigger
-      class="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+      class="flex items-center space-x-1 text-white hover:text-blue-600 font-medium transition-colors duration-200"
     >
       <span>Category</span>
       <svg
