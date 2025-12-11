@@ -1,7 +1,6 @@
 // 1. CategoryPage.vue (Main Component)
 <template>
   <div class="bg-white min-h-screen">
-    <Header />
     <Navbar @search="handleSearch" />
 
     <main class="w-full px-auto py-20 lg:py-25">
@@ -77,7 +76,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import Header from "@/components/Layout/Header.vue";
 import Navbar from "@/components/Layout/Navbar/Navbar.vue";
 import Footer from "@/components/Layout/Footer.vue";
 import { useCategoryStore } from "@/stores/categoryStore";
