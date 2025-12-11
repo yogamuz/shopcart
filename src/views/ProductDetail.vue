@@ -1,7 +1,6 @@
 <!-- ProductDetail.vue - Tambah isAuthenticated prop saja -->
 <template>
   <div class="bg-white">
-    <Header />
     <Navbar />
 
     <!-- Flying Image Animation -->
@@ -149,7 +148,6 @@ import { useRoute, useRouter } from "vue-router";
 
 // Layout Components
 import Navbar from "@/components/Layout/Navbar/Navbar.vue";
-import Header from "@/components/Layout/Header.vue";
 import Footer from "@/components/Layout/Footer.vue";
 import Loading from "@/components/Common/Loading.vue";
 
