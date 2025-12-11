@@ -1,6 +1,6 @@
 <!-- todaybestdealsvue -->
 <template>
-  <section id="deals" class="py-12 px-4 sm:px-6 lg:px-8 bg-white">
+<section id="deals" data-section="today-best-deals" class="py-12 px-4 sm:px-6 lg:px-8 bg-white">
     <div class="max-w-7xl mx-auto">
       <!-- Dynamic Title based on filtering state -->
       <h2 class="text-3xl font-bold text-gray-900 mb-4 sm:mb-8">

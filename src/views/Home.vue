@@ -1,6 +1,5 @@
 <!-- home.vue -->
 <template>
-  <Header />
   <Navbar 
     @search="handleSearch" 
     @category-selected="handleCategorySelected"
@@ -41,7 +40,6 @@ import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProductsApi } from "@/composables/useProduct";
 import { useSearch } from "@/composables/useSearch";
-import Header from "@/components/Layout/Header.vue";
 import Hero from "@/components/Homepage/Hero.vue";
 import Navbar from "@/components/Layout/Navbar/Navbar.vue";
 import Brand from "@/components/Homepage/Brand/Brand.vue";
