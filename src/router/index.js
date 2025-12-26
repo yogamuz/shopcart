@@ -13,14 +13,14 @@ const routes = [
     path: "/",
     component: DefaultLayout,
     children: [
-      { 
-        path: "", 
-        name: "Home", 
-        component: () => import("@/views/Home.vue")
+      {
+        path: "",
+        name: "Home",
+        component: () => import("@/views/Home.vue"),
       },
-      { 
+      {
         path: "category/:categorySlug",
-        name: "Category", 
+        name: "Category",
         component: () => import("@/views/CategoryPage.vue"),
         props: route => ({
           categorySlug: route.params.categorySlug,
@@ -46,9 +46,9 @@ const routes = [
           query: to.query,
         }),
       },
-      { 
-        path: "products/:slug", 
-        name: "ProductDetail", 
+      {
+        path: "products/:slug",
+        name: "ProductDetail",
         component: () => import("@/views/ProductDetail.vue"),
         props: true,
         meta: { title: "Product Details" },
@@ -59,24 +59,6 @@ const routes = [
         component: () => import("@/views/StoreProfile.vue"),
         props: true,
         meta: { title: "Store Profile" },
-      },
-      { 
-        path: "login", 
-        name: "LoginView", 
-        component: () => import("@/views/LoginView.vue"),
-        meta: { 
-          guest: true,
-          title: "Login" 
-        },
-      },
-      { 
-        path: "register", 
-        name: "RegisterView", 
-        component: () => import("@/views/RegisterView.vue"),
-        meta: { 
-          guest: true,
-          title: "Register" 
-        },
       },
     ],
   },
@@ -95,18 +77,18 @@ const routes = [
     name: "OrdersPage",
     component: () => import("@/views/OrdersPage.vue"),
     props: true,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: "My Orders" 
+      title: "My Orders",
     },
   },
   {
     path: "/orders/checkout",
     name: "OrderCheckout",
     component: () => import("@/views/OrdersPage.vue"),
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: "Checkout" 
+      title: "Checkout",
     },
   },
   {
@@ -114,9 +96,9 @@ const routes = [
     name: "OrderDetail",
     component: () => import("@/views/OrdersPage.vue"),
     props: true,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: "Order Details" 
+      title: "Order Details",
     },
   },
 
