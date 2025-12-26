@@ -9,12 +9,9 @@
         @click="toggleAccountMenu"
         class="hidden sm:flex items-center space-x-3 text-white hover:text-blue-600 transition-colors duration-200"
       >
-        <!-- Avatar Circle - Prioritize avatarUrl from profile -->
         <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-md overflow-hidden">
-          <!-- Loading skeleton -->
           <div v-if="isLoadingAvatar" class="w-full h-full bg-gray-200 animate-pulse"></div>
 
-          <!-- Avatar image -->
           <img
             v-else-if="profileAvatarUrl"
             :src="profileAvatarUrl"
@@ -23,7 +20,6 @@
             @error="handleAvatarError"
           />
 
-          <!-- Fallback initials -->
           <div
             v-else
             class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium text-sm"
@@ -90,7 +86,7 @@
           <div v-if="!isAuthenticated">
             <button
               @click="handleNavigation('/login')"
-              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,7 +102,7 @@
             </button>
             <button
               @click="handleNavigation('/register')"
-              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,14 +120,14 @@
 
           <!-- If authenticated -->
           <div v-else>
-            <div class="px-4 py-2 text-sm text-white border-b border-gray-200">
+            <div class="px-4 py-2 text-sm text-gray-700 border-b border-gray-200">
               <div class="font-medium">{{ getUserDisplayName() }}</div>
-              <div class="text-xs">{{ user?.email }}</div>
+              <div class="text-xs text-gray-500">{{ user?.email }}</div>
             </div>
             <button
               v-if="!isAdmin"
               @click="handleNavigation('/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,11 +142,10 @@
               </div>
             </button>
 
-            <!-- Role-based navigation -->
             <button
               v-if="isSeller"
               @click="handleNavigation('/seller/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +163,7 @@
             <button
               v-if="isAdmin"
               @click="handleNavigation('/admin/dashboard')"
-              class="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-100 transition-colors duration-200"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200"
             >
               <div class="flex items-center space-x-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,6 +207,7 @@
         </div>
       </transition>
     </div>
+
     <!-- Cart Link with Quantity Badge -->
     <div class="relative">
       <button
@@ -228,7 +224,6 @@
             />
           </svg>
 
-          <!-- Quantity Badge -->
           <div
             v-if="isUserAuthenticated() && cartCount > 0"
             class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium shadow-sm"
@@ -240,6 +235,7 @@
         <span class="font-medium">Cart</span>
       </button>
     </div>
+
     <!-- Mobile Menu Button -->
     <button
       @click.stop="$emit('toggle-mobile-menu')"
@@ -250,9 +246,17 @@
       </svg>
     </button>
   </div>
-</template>
 
-// navAccountCart.vue - FIXED
+  <!-- Auth Modal -->
+  <AuthModal
+    :isOpen="showAuthModal"
+    :initialMode="authModalMode"
+    @close="closeAuthModal"
+    @login-success="handleLoginSuccess"
+    @register-success="handleRegisterSuccess"
+    @success="handleLoginSuccess"
+  />
+</template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
@@ -260,15 +264,11 @@ import { useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import { useCart } from "@/composables/useCart";
 import { useUserProfile } from "@/composables/useUserProfile";
+import AuthModal from "@/components/Auth/AuthModal.vue";
 
 // Composables
 const { cartCount, isUserAuthenticated } = useCart();
-const {
-  profileDisplayName,
-  profileInitials,
-  avatarUrl: profileAvatarUrl,
-  // ❌ HAPUS: initialize - tidak perlu di navbar
-} = useUserProfile();
+const { profileDisplayName, profileInitials, avatarUrl: profileAvatarUrl } = useUserProfile();
 
 const router = useRouter();
 const { user, isAuthenticated, isSeller, isAdmin, logout, isLoading } = useAuth();
@@ -276,8 +276,10 @@ const { user, isAuthenticated, isSeller, isAdmin, logout, isLoading } = useAuth(
 // Local state
 const showAccountMenu = ref(false);
 const accountContainer = ref(null);
+const showAuthModal = ref(false);
+const authModalMode = ref("login");
 
-// Computed properties - sama seperti sebelumnya
+// Computed - Generate display name with fallback priority
 const userDisplayName = computed(() => {
   if (profileDisplayName.value && profileDisplayName.value !== "User") {
     return profileDisplayName.value;
@@ -295,6 +297,7 @@ const userDisplayName = computed(() => {
   return "User";
 });
 
+// Computed - Generate user initials from display name
 const userInitials = computed(() => {
   if (profileInitials.value && profileInitials.value !== "U") {
     return profileInitials.value;
@@ -315,11 +318,12 @@ const userInitials = computed(() => {
   return displayName.slice(0, 2).toUpperCase();
 });
 
+// Computed - Check if avatar is still loading
 const isLoadingAvatar = computed(() => {
   return isAuthenticated.value && !profileDisplayName.value;
 });
 
-// Watch avatar URL changes and preload - KEEP THIS
+// Watch - Preload avatar image when URL changes
 watch(profileAvatarUrl, newUrl => {
   if (newUrl) {
     const img = new Image();
@@ -327,28 +331,42 @@ watch(profileAvatarUrl, newUrl => {
   }
 });
 
-// ❌ HAPUS KEDUA WATCH INI - Redundant!
-// watch(isAuthenticated, ...) 
-// watch(() => user.value?.accessToken, ...)
-// Profile initialize sudah di-handle di composable useUserProfile
-
-// Methods - sama seperti sebelumnya
+// Methods - Getter functions for template
 const getUserDisplayName = () => userDisplayName.value;
 const getUserInitials = () => userInitials.value;
 
+// Toggle account dropdown menu
 const toggleAccountMenu = event => {
   event.preventDefault();
   event.stopPropagation();
   showAccountMenu.value = !showAccountMenu.value;
 };
 
+// Close account dropdown menu
 const closeAccountMenu = () => {
   showAccountMenu.value = false;
 };
 
+// Handle navigation with auth modal interception
 const handleNavigation = async path => {
   try {
     closeAccountMenu();
+
+    // Intercept login route - show modal instead
+    if (path === "/login") {
+      authModalMode.value = "login";
+      showAuthModal.value = true;
+      return;
+    }
+
+    // Intercept register route - show modal instead
+    if (path === "/register") {
+      authModalMode.value = "register";
+      showAuthModal.value = true;
+      return;
+    }
+
+    // Normal navigation for other routes
     if (router.currentRoute.value.path === path) return;
     await router.push(path);
   } catch (err) {
@@ -357,6 +375,7 @@ const handleNavigation = async path => {
   }
 };
 
+// Handle user logout
 const handleLogout = async () => {
   try {
     closeAccountMenu();
@@ -369,26 +388,41 @@ const handleLogout = async () => {
   }
 };
 
+// Handle avatar image load error
 const handleAvatarError = event => {
   event.target.style.display = "none";
 };
 
+// Close dropdown when clicking outside
 const handleClickOutside = event => {
   if (accountContainer.value && !accountContainer.value.contains(event.target)) {
     closeAccountMenu();
   }
 };
 
-// ❌ HAPUS onMounted yang initialize profile
-// onMounted sudah di-handle di useUserProfile composable
+// Close auth modal
+const closeAuthModal = () => {
+  showAuthModal.value = false;
+};
 
+// Handle successful login from modal
+const handleLoginSuccess = () => {
+  showAuthModal.value = false;
+};
+
+// Handle successful registration from modal
+const handleRegisterSuccess = () => {
+  showAuthModal.value = false;
+};
+
+// Lifecycle - Setup click outside listener
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside, { passive: true });
+});
+
+// Lifecycle - Cleanup listeners
 onUnmounted(() => {
   closeAccountMenu();
   document.removeEventListener("click", handleClickOutside);
-});
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside, { passive: true });
-  // ✅ Hanya setup event listener, jangan initialize profile
 });
 </script>

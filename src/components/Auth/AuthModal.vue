@@ -1,57 +1,60 @@
-<!-- AuthModal.vue - Main Component -->
+<!-- AuthModal.vue - FINAL FIX with Teleport -->
 <template>
-  <div v-if="show" class="modal-overlay" @click.self="handleOverlayClick">
-    <div class="modal-content">
-      <ModalHeader :currentMode="currentMode" @close="$emit('close')" />
+  <!-- SOLUTION: Use Teleport to render modal at body level, bypassing all parent constraints -->
+  <Teleport to="body">
+    <div v-if="isModalOpen" class="modal-overlay" @click.self="handleOverlayClick">
+      <div class="modal-content">
+        <ModalHeader :currentMode="currentMode" @close="$emit('close')" />
 
-      <div class="modal-body">
-        <!-- Login Mode -->
-        <LoginForm
-          v-if="currentMode === 'login'"
-          :loginForm="loginForm"
-          :formLoading="formLoading"
-          :formError="formError"
-          :formSuccess="formSuccess"
-          :isLoginFormValid="isLoginFormValid"
-          @handleLogin="handleLogin"
-          @switchToRegister="switchToRegister"
-          @switchToForgotPassword="switchToForgotPassword"
-          @close="$emit('close')"
-        />
+        <div class="modal-body">
+          <!-- Login Mode -->
+          <LoginForm
+            v-if="currentMode === 'login'"
+            :loginForm="loginForm"
+            :formLoading="formLoading"
+            :formError="formError"
+            :formSuccess="formSuccess"
+            :isLoginFormValid="isLoginFormValid"
+            @handleLogin="handleLogin"
+            @switchToRegister="switchToRegister"
+            @switchToForgotPassword="switchToForgotPassword"
+            @close="$emit('close')"
+          />
 
-        <!-- Register Mode -->
-        <RegisterForm
-          v-else-if="currentMode === 'register'"
-          :registerForm="registerForm"
-          :formLoading="formLoading"
-          :formError="formError"
-          :formSuccess="formSuccess"
-          :isRegisterFormValid="isRegisterFormValid"
-          :passwordsMatch="passwordsMatch"
-          :usernameAvailability="usernameAvailability"
-          @handleRegister="handleRegister"
-          @switchToLogin="switchToLogin"
-          @handleUsernameInput="handleUsernameInput"
-        />
+          <!-- Register Mode -->
+          <RegisterForm
+            v-else-if="currentMode === 'register'"
+            :registerForm="registerForm"
+            :formLoading="formLoading"
+            :formError="formError"
+            :formSuccess="formSuccess"
+            :isRegisterFormValid="isRegisterFormValid"
+            :passwordsMatch="passwordsMatch"
+            :usernameAvailability="usernameAvailability"
+            @handleRegister="handleRegister"
+            @switchToLogin="switchToLogin"
+            @handleUsernameInput="handleUsernameInput"
+          />
 
-        <!-- Forgot Password Mode -->
-        <ForgotPasswordForm
-          v-else-if="currentMode === 'forgot'"
-          :forgotForm="forgotForm"
-          :forgotStep="forgotStep"
-          :formLoading="formLoading"
-          :formError="formError"
-          :formSuccess="formSuccess"
-          :isForgotFormValid="isForgotFormValid"
-          :forgotPasswordsMatch="forgotPasswordsMatch"
-          @handleSendOtp="handleSendOtp"
-          @handleResetPassword="handleResetPassword"
-          @backToEmailStep="backToEmailStep"
-          @switchToLogin="switchToLogin"
-        />
+          <!-- Forgot Password Mode -->
+          <ForgotPasswordForm
+            v-else-if="currentMode === 'forgot'"
+            :forgotForm="forgotForm"
+            :forgotStep="forgotStep"
+            :formLoading="formLoading"
+            :formError="formError"
+            :formSuccess="formSuccess"
+            :isForgotFormValid="isForgotFormValid"
+            :forgotPasswordsMatch="forgotPasswordsMatch"
+            @handleSendOtp="handleSendOtp"
+            @handleResetPassword="handleResetPassword"
+            @backToEmailStep="backToEmailStep"
+            @switchToLogin="switchToLogin"
+          />
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -70,6 +73,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isOpen: {
+    type: Boolean,
+    default: false,
+  },
+  initialMode: {
+    type: String,
+    default: "login",
+  },
   isLoading: {
     type: Boolean,
     default: false,
@@ -77,20 +88,15 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(["close", "login", "register", "success"]);
+const emit = defineEmits(["close", "success", "login-success", "register-success"]);
+const isModalOpen = computed(() => props.show || props.isOpen);
 
 // Composables
-const {
-  login,
-  register,
-  requestPasswordReset,
-  resetPassword,
-  checkUsernameAvailability: checkUsernameAPI,
-} = useAuth();
+const { login, register, requestPasswordReset, resetPassword, checkUsernameAvailability: checkUsernameAPI } = useAuth();
 
 // Local state
-const currentMode = ref("login"); // 'login' | 'register' | 'forgot'
-const forgotStep = ref("email"); // 'email' | 'reset'
+const currentMode = ref("login");
+const forgotStep = ref("email");
 const formLoading = ref(false);
 const formError = ref(null);
 const formSuccess = ref(null);
@@ -115,6 +121,7 @@ const forgotForm = ref({
   newPassword: "",
   confirmPassword: "",
 });
+
 // Username availability state
 const usernameAvailability = ref({
   checking: false,
@@ -122,25 +129,19 @@ const usernameAvailability = ref({
   message: "",
 });
 
-// Updated isLoginFormValid computed - Support username OR email
+// Computed validations
 const isLoginFormValid = computed(() => {
   const identifier = loginForm.value.email.trim();
   const password = loginForm.value.password.trim();
-  
-  // Basic validation
+
   if (!identifier || !password || password.length < 6) {
     return false;
   }
-  
-  // Validate identifier (email atau username)
-  if (identifier.includes('@')) {
-    // Jika ada @, validate sebagai email
+
+  if (identifier.includes("@")) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
   } else {
-    // Jika tidak ada @, validate sebagai username
-    return identifier.length >= 3 && 
-           identifier.length <= 30 && 
-           /^[a-zA-Z0-9_]+$/.test(identifier);
+    return identifier.length >= 3 && identifier.length <= 30 && /^[a-zA-Z0-9_]+$/.test(identifier);
   }
 });
 
@@ -160,14 +161,12 @@ const isRegisterFormValid = computed(() => {
 });
 
 const passwordsMatch = computed(() => {
-  if (!registerForm.value.password || !registerForm.value.confirmPassword)
-    return true;
+  if (!registerForm.value.password || !registerForm.value.confirmPassword) return true;
   return registerForm.value.password === registerForm.value.confirmPassword;
 });
 
 const forgotPasswordsMatch = computed(() => {
-  if (!forgotForm.value.newPassword || !forgotForm.value.confirmPassword)
-    return true;
+  if (!forgotForm.value.newPassword || !forgotForm.value.confirmPassword) return true;
   return forgotForm.value.newPassword === forgotForm.value.confirmPassword;
 });
 
@@ -254,25 +253,18 @@ const handleSendOtp = async () => {
 const handleResetPassword = async () => {
   if (!isForgotFormValid.value) return;
 
-  // Validation
   if (!forgotForm.value.otpCode || forgotForm.value.otpCode.length !== 6) {
     formError.value = "Please enter a valid 6-digit OTP";
     return;
   }
 
-  if (
-    !forgotForm.value.newPassword ||
-    forgotForm.value.newPassword.length < 6
-  ) {
+  if (!forgotForm.value.newPassword || forgotForm.value.newPassword.length < 6) {
     formError.value = "Password must be at least 6 characters";
     return;
   }
 
-  if (
-    !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(forgotForm.value.newPassword)
-  ) {
-    formError.value =
-      "Password must contain at least one lowercase, uppercase, and number";
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(forgotForm.value.newPassword)) {
+    formError.value = "Password must contain at least one lowercase, uppercase, and number";
     return;
   }
 
@@ -285,11 +277,7 @@ const handleResetPassword = async () => {
     formLoading.value = true;
     clearMessages();
 
-    await resetPassword(
-      forgotForm.value.email,
-      forgotForm.value.otpCode,
-      forgotForm.value.newPassword
-    );
+    await resetPassword(forgotForm.value.email, forgotForm.value.otpCode, forgotForm.value.newPassword);
 
     formSuccess.value = "Password reset successful! Logging you in...";
 
@@ -310,14 +298,12 @@ const handleResetPassword = async () => {
         forgotStep.value = "email";
         resetForms();
         clearMessages();
-        formSuccess.value =
-          "Password reset successful! Please login with your new password.";
+        formSuccess.value = "Password reset successful! Please login with your new password.";
       }
     }, 1500);
   } catch (error) {
     console.error("Reset password error:", error);
-    formError.value =
-      error.message || "Password reset failed. Please try again.";
+    formError.value = error.message || "Password reset failed. Please try again.";
   } finally {
     formLoading.value = false;
   }
@@ -342,7 +328,6 @@ const resetForms = () => {
     confirmPassword: "",
   };
 
-  // Reset username availability state
   usernameAvailability.value = {
     checking: false,
     available: null,
@@ -382,15 +367,13 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   if (!isRegisterFormValid.value) return;
 
-  // Validation
   if (!/^[a-zA-Z0-9_]+$/.test(registerForm.value.username)) {
     formError.value = "Username must be alphanumeric and underscore only";
     return;
   }
 
   if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/.test(registerForm.value.password)) {
-    formError.value =
-      "Password must contain at least one lowercase, uppercase, and number";
+    formError.value = "Password must contain at least one lowercase, uppercase, and number";
     return;
   }
 
@@ -425,15 +408,14 @@ const handleRegister = async () => {
         formError.value = fieldErrors[0];
       }
     } else {
-      formError.value =
-        error.message || "Registration failed. Please try again.";
+      formError.value = error.message || "Registration failed. Please try again.";
     }
   } finally {
     formLoading.value = false;
   }
 };
 
-const checkUsernameAvailability = async (username) => {
+const checkUsernameAvailability = async username => {
   if (!username || username.length < 3) {
     usernameAvailability.value = {
       checking: false,
@@ -454,7 +436,7 @@ const checkUsernameAvailability = async (username) => {
 
   try {
     usernameAvailability.value.checking = true;
-    const result = await checkUsernameAPI(username); // ← Gunakan alias
+    const result = await checkUsernameAPI(username);
 
     usernameAvailability.value = {
       checking: false,
@@ -470,29 +452,25 @@ const checkUsernameAvailability = async (username) => {
   }
 };
 
-// Debounced username check
 let usernameCheckTimeout;
-const handleUsernameInput = (username) => {
+const handleUsernameInput = username => {
   clearTimeout(usernameCheckTimeout);
   usernameCheckTimeout = setTimeout(() => {
     checkUsernameAvailability(username);
   }, 500);
 };
-watch(
-  () => props.show,
-  (newVal) => {
-    if (!newVal) {
-      // Clear timeout when modal closes
-      clearTimeout(usernameCheckTimeout);
 
-      setTimeout(() => {
-        currentMode.value = "login";
-        forgotStep.value = "email";
-        resetForms();
-      }, 300);
+watch(
+  () => isModalOpen.value,
+  newVal => {
+    if (newVal) {
+      currentMode.value = props.initialMode;
+      resetForms();
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
     }
-  },
-  { immediate: false }
+  }
 );
 </script>
 
@@ -507,7 +485,7 @@ watch(
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999;
   backdrop-filter: blur(4px);
 }
 
@@ -538,7 +516,6 @@ watch(
   text-align: center;
 }
 
-/* Responsive Design */
 @media (max-width: 640px) {
   .modal-content {
     width: 95%;

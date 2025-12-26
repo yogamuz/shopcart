@@ -203,7 +203,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import AuthModal from "./AuthModal.vue";
+import AuthModal from "../Auth/AuthModal.vue"
 import { useToast } from "@/composables/useToast";
 
 // Router & Toast
