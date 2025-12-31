@@ -13,3 +13,16 @@
 import Navbar from "@/components/Layout/Navbar/Navbar.vue";
 import Footer from "@/components/Layout/Footer.vue";
 </script>
+
+<style scoped>
+.default-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+  padding-top: 25px; /* Height of fixed navbar */
+}
+</style>

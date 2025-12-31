@@ -6,7 +6,7 @@
     <!-- Product Card -->
     <div
       v-for="product in products"
-      :key="product.id || product._id"
+      :key="product.slug"
       class="card group border border-gray-200 bg-white rounded-xl overflow-hidden hover:border-gray-300 transition-all duration-300 flex flex-col h-full hover:shadow-lg cursor-pointer"
       @click="navigateToProduct(product)"
     >
@@ -197,7 +197,6 @@ const props = defineProps({
 const emit = defineEmits(["toggle-like", "product-click", "add-to-cart"]);
 
 const navigateToProduct = (product) => {
-  
   if (product && product.slug) {
     router.push({ path: `/products/${product.slug}` });
   } else {

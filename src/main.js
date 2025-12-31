@@ -94,19 +94,16 @@ const initApp = async () => {
     // Always initialize auth store untuk restore state dari localStorage
     const authStore = useAuthStore()
     await authStore.initialize()
-    console.log('Auth initialized successfully')
   } catch (err) {
     console.warn('Auth initialization failed:', err)
   } finally {
     // Mount app regardless of auth initialization result
     app.mount('#app')
-    console.log('App mounted successfully')
   }
 }
 
 // Handle router ready state
 router.isReady().then(() => {
-  console.log('Router is ready')
   initApp()
 }).catch(err => {
   console.error('Router initialization failed:', err)

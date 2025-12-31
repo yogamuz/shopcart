@@ -1,12 +1,11 @@
-// stores/userProfileStore.js
+// stores/userProfileStore.js - Fixed with proper reactive updates
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import userProfileService from "@/services/userProfileService";
+import { userProfileService } from "@/services/userProfileService";
 import { useAuthStore } from "@/stores/authStore";
-import { useQueryClient } from "@tanstack/vue-query";
 
 export const useUserProfileStore = defineStore("userProfile", () => {
-  // State
+  // ========== STATE ==========
   const profile = ref(null);
   const addresses = ref([]);
   const loading = ref(false);
@@ -14,17 +13,21 @@ export const useUserProfileStore = defineStore("userProfile", () => {
   const uploadProgress = ref(0);
   const isUploading = ref(false);
 
-  // Getters (computed)
+  // ========== COMPUTED ==========
   const hasProfile = computed(() => profile.value !== null);
 
   const fullName = computed(() => {
     if (!profile.value) return "User";
-    return userProfileService.getFullName(profile.value.firstName, profile.value.lastName);
+    const first = profile.value.firstName || "";
+    const last = profile.value.lastName || "";
+    return `${first} ${last}`.trim() || "User";
   });
 
   const initials = computed(() => {
     if (!profile.value) return "U";
-    return userProfileService.getInitials(profile.value.firstName, profile.value.lastName);
+    const first = profile.value.firstName ? profile.value.firstName.charAt(0).toUpperCase() : "";
+    const last = profile.value.lastName ? profile.value.lastName.charAt(0).toUpperCase() : "";
+    return `${first}${last}` || "U";
   });
 
   const defaultAddress = computed(() => {
@@ -33,21 +36,28 @@ export const useUserProfileStore = defineStore("userProfile", () => {
 
   const formattedPhone = computed(() => {
     if (!profile.value?.phone) return "";
-    return userProfileService.formatPhone(profile.value.phone);
+    const digits = profile.value.phone.replace(/\D/g, "");
+    
+    if (digits.startsWith("62")) {
+      return `+62 ${digits.substring(2, 5)} ${digits.substring(5, 9)} ${digits.substring(9)}`;
+    } else if (digits.startsWith("08")) {
+      return `${digits.substring(0, 4)} ${digits.substring(4, 8)} ${digits.substring(8)}`;
+    }
+    
+    return profile.value.phone;
   });
 
   const avatarUrl = computed(() => {
-    // Handle both possible structures for backward compatibility
-    if (profile.value?.avatar) {
-      // If avatar is a string (direct URL)
-      if (typeof profile.value.avatar === "string") {
-        return profile.value.avatar;
-      }
-      // If avatar is an object with url property
-      if (profile.value.avatar.url) {
-        return profile.value.avatar.url;
-      }
+    if (!profile.value?.avatar) return null;
+    
+    if (typeof profile.value.avatar === "string") {
+      return profile.value.avatar;
     }
+    
+    if (profile.value.avatar.url) {
+      return profile.value.avatar.url;
+    }
+    
     return null;
   });
 
@@ -61,12 +71,10 @@ export const useUserProfileStore = defineStore("userProfile", () => {
     const totalFields = requiredFields.length + optionalFields.length + addressFields.length;
     let completedFields = 0;
 
-    // Check required fields
     requiredFields.forEach(field => {
       if (profile.value[field]) completedFields++;
     });
 
-    // Check optional fields
     optionalFields.forEach(field => {
       if (field === "avatar" && profile.value.avatar?.url) {
         completedFields++;
@@ -75,78 +83,82 @@ export const useUserProfileStore = defineStore("userProfile", () => {
       }
     });
 
-    // Check address
     if (addresses.value.length > 0) completedFields++;
 
     return Math.round((completedFields / totalFields) * 100);
   });
 
-const lastSeen = computed(() => {
-  if (!profile.value?.user?.lastSeen) return null;
-  return new Date(profile.value.user.lastSeen);
-});
+  const lastSeen = computed(() => {
+    if (!profile.value?.user?.lastSeen) return null;
+    return new Date(profile.value.user.lastSeen);
+  });
 
-const lastSeenFormatted = computed(() => {
-  if (!lastSeen.value) return 'Never';
-  
-  const now = new Date();
-  const diff = now - lastSeen.value;
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  
-  return lastSeen.value.toLocaleDateString();
-});
+  const lastSeenFormatted = computed(() => {
+    if (!lastSeen.value) return "Never";
+    
+    const now = new Date();
+    const diff = now - lastSeen.value;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    
+    return lastSeen.value.toLocaleDateString();
+  });
 
-  // Actions
+  // ========== ACTIONS ==========
+
   const clearError = () => {
     error.value = null;
   };
 
-  const setLoading = isLoading => {
+  const setLoading = (isLoading) => {
     loading.value = isLoading;
   };
 
-  const setError = errorMessage => {
+  const setError = (errorMessage) => {
     error.value = errorMessage;
   };
 
-  /**
-   * Fetch user profile
-   */
+  const clearProfile = () => {
+    profile.value = null;
+    addresses.value = [];
+    error.value = null;
+    loading.value = false;
+  };
+
 const fetchProfile = async (forceRefresh = false) => {
+  // ✅ Guard: jangan fetch kalau sudah ada & tidak expired
   if (!forceRefresh && profile.value && !loading.value) {
-    return { success: true, data: { profile: profile.value } };
+    return { success: true, data: profile.value };
   }
 
-  if (loading.value && !forceRefresh) return;
+  // ✅ Guard: jangan fetch kalau sudah loading
+  if (loading.value && !forceRefresh) {
+    return;
+  }
 
   try {
     setLoading(true);
     clearError();
 
-    const result = await userProfileService.getProfile();
+    const response = await userProfileService.getProfile();
 
-    if (result.success) {
-      profile.value = result.data.profile;
+    if (response.success) {
+      profile.value = response.data.profile;
 
-      // ✅ FIX: Cek apakah response include addresses
-      if (result.data.addresses?.list) {
-        // Backend return addresses → langsung set
-        addresses.value = result.data.addresses.list;
-      } else {
-        // Backend tidak return addresses → perlu fetch terpisah
+      if (response.data.addresses?.list) {
+        addresses.value = response.data.addresses.list;
       }
 
-      return result;
+      return { success: true, data: profile.value };
     }
   } catch (err) {
-    console.error("Error fetching profile:", err);
+    console.error("❌ Error fetching profile:", err);
     setError(err.message || "Failed to load profile");
 
     if (err.status === 404 || err.message?.includes("not found")) {
@@ -161,34 +173,24 @@ const fetchProfile = async (forceRefresh = false) => {
   }
 };
 
-  /**
-   * Create user profile
-   */
-  const createProfile = async profileData => {
+  const createProfile = async (profileData) => {
     try {
       setLoading(true);
       clearError();
 
-      // Validate data before sending
-      const validation = userProfileService.validateProfile(profileData);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
-      }
+      const response = await userProfileService.createProfile(profileData);
 
-      const result = await userProfileService.createProfile(profileData);
+      if (response.success) {
+        profile.value = response.data.profile;
 
-      if (result.success) {
-        profile.value = result.data.profile;
-
-        // Update addresses if they exist
-        if (result.data.profile?.addresses) {
-          addresses.value = result.data.profile.addresses.list || [];
+        if (response.data.profile?.addresses) {
+          addresses.value = response.data.profile.addresses.list || [];
         }
 
-        return result;
+        return { success: true, data: profile.value };
       }
     } catch (err) {
-      console.error("Error creating profile:", err);
+      console.error("❌ Error creating profile:", err);
       setError(err.message || "Failed to create profile");
       throw err;
     } finally {
@@ -196,34 +198,24 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Update user profile
-   */
-  const updateProfile = async profileData => {
+  const updateProfile = async (profileData) => {
     try {
       setLoading(true);
       clearError();
 
-      const validation = userProfileService.validateProfile(profileData);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
-      }
+      const response = await userProfileService.updateProfile(profileData);
 
-      const result = await userProfileService.updateProfile(profileData);
+      if (response.success) {
+        profile.value = response.data.profile;
 
-      if (result.success) {
-        // ✅ TAMBAHKAN: Deep clone untuk force reactivity
-        profile.value = JSON.parse(JSON.stringify(result.data.profile));
-
-
-        if (result.data.profile?.addresses) {
-          addresses.value = result.data.profile.addresses.list || [];
+        if (response.data.profile?.addresses) {
+          addresses.value = response.data.profile.addresses.list || [];
         }
 
-        return result;
+        return { success: true, data: profile.value };
       }
     } catch (err) {
-      console.error("Error updating profile:", err);
+      console.error("❌ Error updating profile:", err);
       setError(err.message || "Failed to update profile");
       throw err;
     } finally {
@@ -231,29 +223,23 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Delete user account
-   */
   const deleteAccount = async () => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.deleteAccount();
+      const response = await userProfileService.deleteAccount();
 
-      if (result.success) {
-        // Clear all data
-        profile.value = null;
-        addresses.value = [];
+      if (response.success) {
+        clearProfile();
 
-        // Also logout from auth store
         const authStore = useAuthStore();
         await authStore.logout();
 
-        return result;
+        return { success: true };
       }
     } catch (err) {
-      console.error("Error deleting account:", err);
+      console.error("❌ Error deleting account:", err);
       setError(err.message || "Failed to delete account");
       throw err;
     } finally {
@@ -261,16 +247,14 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Upload avatar with progress tracking
-   */
-  const uploadAvatar = async (file, queryClient = null) => {
+  // ========== AVATAR METHODS ==========
+
+  const uploadAvatar = async (file) => {
     try {
       isUploading.value = true;
       uploadProgress.value = 0;
       clearError();
 
-      // Validate file
       if (!file) {
         throw new Error("Please select a file to upload");
       }
@@ -285,35 +269,16 @@ const fetchProfile = async (forceRefresh = false) => {
         throw new Error("Only JPEG, PNG, and WebP images are allowed");
       }
 
-      const result = await userProfileService.uploadAvatar(file, progressEvent => {
+      const response = await userProfileService.uploadAvatar(file, (progressEvent) => {
         uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total);
       });
 
-
-      if (result.success) {
-        const profileData = result.data.profile;
-
-        if (profileData) {
-          if (profile.value) {
-            profile.value = {
-              ...profile.value,
-              ...profileData,
-            };
-          } else {
-            profile.value = profileData;
-          }
-
-        }
-
-        // ✅ Invalidate query jika queryClient tersedia
-        if (queryClient) {
-          await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
-        }
-
-        return result;
+      if (response.success) {
+        profile.value = response.data.profile;
+        return { success: true, data: profile.value };
       }
     } catch (err) {
-      console.error("Error uploading avatar:", err);
+      console.error("❌ Error uploading avatar:", err);
       setError(err.message || "Failed to upload avatar");
       throw err;
     } finally {
@@ -322,41 +287,19 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Remove avatar
-   */
-  const removeAvatar = async (queryClient = null) => {
+  const removeAvatar = async () => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.removeAvatar();
+      const response = await userProfileService.removeAvatar();
 
-
-      if (result.success) {
-        const profileData = result.data.profile;
-
-        if (profileData) {
-          if (profile.value) {
-            profile.value = {
-              ...profile.value,
-              ...profileData,
-            };
-          } else {
-            profile.value = profileData;
-          }
-
-        }
-
-        // ✅ Invalidate query jika queryClient tersedia
-        if (queryClient) {
-          await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
-        }
-
-        return result;
+      if (response.success) {
+        profile.value = response.data.profile;
+        return { success: true, data: profile.value };
       }
     } catch (err) {
-      console.error("Error removing avatar:", err);
+      console.error("❌ Error removing avatar:", err);
       setError(err.message || "Failed to remove avatar");
       throw err;
     } finally {
@@ -364,94 +307,78 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Upgrade to seller
-   */
+  // ========== SELLER UPGRADE ==========
+
   const upgradeToSeller = async () => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.upgradeToSeller();
+      const response = await userProfileService.upgradeToSeller();
 
-      if (result.success) {
-        // Update user role di auth store
+      if (response.success) {
         const authStore = useAuthStore();
         if (authStore.user) {
           authStore.user.role = "seller";
         }
 
-        return result;
+        return { success: true };
       }
     } catch (err) {
-      console.error("Error upgrading to seller:", err);
+      console.error("❌ Error upgrading to seller:", err);
       setError(err.message || "Failed to upgrade to seller");
       throw err;
     } finally {
       setLoading(false);
     }
   };
-  /**
-   * Fetch user addresses
-   */
-const fetchAddresses = async (forceRefresh = false) => {
-  // ✅ Skip jika sudah ada addresses dari profile response
-  if (!forceRefresh && addresses.value.length > 0 && !loading.value) {
-    return { success: true, data: { addresses: { list: addresses.value } } };
-  }
 
-  try {
-    setLoading(true);
-    clearError();
+  // ========== ADDRESS METHODS ==========
 
-    const result = await userProfileService.getAddresses();
-
-    if (result.success) {
-      addresses.value = result.data.addresses?.list || [];
-        return result;
-    }
-  } catch (err) {
-    console.error("Error fetching addresses:", err);
-    setError(err.message || "Failed to load addresses");
-
-    if (err.status === 404 || err.message?.includes("not found")) {
-      addresses.value = [];
-      clearError();
+  const fetchAddresses = async (forceRefresh = false) => {
+    if (!forceRefresh && addresses.value.length > 0 && !loading.value) {
+      return { success: true, data: addresses.value };
     }
 
-    throw err;
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-  /**
-   * Add new address
-   */
-  const addAddress = async addressData => {
     try {
       setLoading(true);
       clearError();
 
-      const validation = userProfileService.validateAddress(addressData);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
-      }
+      const response = await userProfileService.getAddresses();
 
-      const result = await userProfileService.addAddress(addressData);
-
-      if (result.success) {
-        // ✅ HAPUS: Jangan invalidate di sini
-        // await fetchAddresses(); // ❌ REMOVE
-        // const { invalidateAddresses } = useUserQueries(); // ❌ REMOVE
-        // invalidateAddresses(); // ❌ REMOVE
-
-        return result;
+      if (response.success) {
+        addresses.value = response.data.addresses?.list || [];
+        return { success: true, data: addresses.value };
       }
     } catch (err) {
-      console.error("Error adding address:", err);
+      console.error("❌ Error fetching addresses:", err);
+      setError(err.message || "Failed to load addresses");
+
+      if (err.status === 404 || err.message?.includes("not found")) {
+        addresses.value = [];
+        clearError();
+      }
+
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addAddress = async (addressData) => {
+    try {
+      setLoading(true);
+      clearError();
+
+      const response = await userProfileService.addAddress(addressData);
+
+      if (response.success) {
+        // Refresh addresses after add
+        await fetchAddresses(true);
+        return { success: true };
+      }
+    } catch (err) {
+      console.error("❌ Error adding address:", err);
       setError(err.message || "Failed to add address");
       throw err;
     } finally {
@@ -459,35 +386,20 @@ const fetchAddresses = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Update address by index
-   */
   const updateAddress = async (addressIndex, addressData) => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.updateAddress(addressIndex, addressData);
+      const response = await userProfileService.updateAddress(addressIndex, addressData);
 
-      if (result.success) {
-        // GANTI LOGIC INI:
-        // Jika isDefault berubah, refresh semua addresses
-        if (addressData.isDefault !== undefined) {
-          await fetchAddresses(); // Refresh all addresses
-        } else {
-          // Update hanya address yang berubah
-          if (result.data.updatedAddress) {
-            const index = parseInt(addressIndex);
-            if (addresses.value[index]) {
-              addresses.value[index] = result.data.updatedAddress;
-            }
-          }
-        }
-
-        return result;
+      if (response.success) {
+        // Refresh addresses after update
+        await fetchAddresses(true);
+        return { success: true };
       }
     } catch (err) {
-      console.error("Error updating address:", err);
+      console.error("❌ Error updating address:", err);
       setError(err.message || "Failed to update address");
       throw err;
     } finally {
@@ -495,30 +407,20 @@ const fetchAddresses = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Remove address by index
-   */
-  const removeAddress = async addressIndex => {
+  const removeAddress = async (addressIndex) => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.removeAddress(addressIndex);
+      const response = await userProfileService.removeAddress(addressIndex);
 
-      if (result.success) {
-        // Remove from local array
-        addresses.value.splice(parseInt(addressIndex), 1);
-
-        // Update indices for remaining addresses
-        addresses.value = addresses.value.map((addr, index) => ({
-          ...addr,
-          index,
-        }));
-
-        return result;
+      if (response.success) {
+        // Refresh addresses after remove
+        await fetchAddresses(true);
+        return { success: true };
       }
     } catch (err) {
-      console.error("Error removing address:", err);
+      console.error("❌ Error removing address:", err);
       setError(err.message || "Failed to remove address");
       throw err;
     } finally {
@@ -526,27 +428,24 @@ const fetchAddresses = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Set default address by index
-   */
-  const setDefaultAddress = async addressIndex => {
+  const setDefaultAddress = async (addressIndex) => {
     try {
       setLoading(true);
       clearError();
 
-      const result = await userProfileService.setDefaultAddress(addressIndex);
+      const response = await userProfileService.setDefaultAddress(addressIndex);
 
-      if (result.success) {
-        // Update local addresses - set all to false, then set selected to true
+      if (response.success) {
+        // Update locally
         addresses.value = addresses.value.map((addr, index) => ({
           ...addr,
           isDefault: index === parseInt(addressIndex),
         }));
 
-        return result;
+        return { success: true };
       }
     } catch (err) {
-      console.error("Error setting default address:", err);
+      console.error("❌ Error setting default address:", err);
       setError(err.message || "Failed to set default address");
       throw err;
     } finally {
@@ -554,9 +453,20 @@ const fetchAddresses = async (forceRefresh = false) => {
     }
   };
 
-  /**
-   * Reset store to initial state
-   */
+  // ========== INITIALIZATION ==========
+
+  const initialize = async () => {
+    try {
+      await fetchProfile(true);
+
+      if (addresses.value.length === 0) {
+        await fetchAddresses(true);
+      }
+    } catch (err) {
+      console.error("❌ Error initializing profile store:", err);
+    }
+  };
+
   const $reset = () => {
     profile.value = null;
     addresses.value = [];
@@ -566,25 +476,7 @@ const fetchAddresses = async (forceRefresh = false) => {
     isUploading.value = false;
   };
 
-  /**
-   * Initialize store (fetch profile and addresses)
-   */
-const initialize = async () => {
-  try {
-    // 1. Fetch profile dulu
-    await fetchProfile(true);
-
-    // 2. Cek apakah addresses sudah di-set dari profile response
-    if (addresses.value.length === 0) {
-      // Belum ada addresses → fetch terpisah
-      await fetchAddresses(true);
-    }
-    // Jika sudah ada, skip fetch addresses terpisah
-
-  } catch (err) {
-    console.error("Error initializing profile store:", err);
-  }
-};
+  // ========== RETURN ==========
 
   return {
     // State
@@ -595,7 +487,7 @@ const initialize = async () => {
     uploadProgress,
     isUploading,
 
-    // Getters
+    // Computed
     hasProfile,
     fullName,
     initials,
@@ -610,6 +502,7 @@ const initialize = async () => {
     clearError,
     setLoading,
     setError,
+    clearProfile,
     fetchProfile,
     createProfile,
     updateProfile,

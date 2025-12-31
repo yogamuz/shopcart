@@ -40,13 +40,7 @@
             </svg>
           </button>
 
-          <!-- Stock Badge -->
-          <div
-            v-if="related.stock && related.stock <= 10"
-            class="absolute top-3 left-3 px-2 py-1 bg-orange-500 text-white text-xs rounded-full font-medium"
-          >
-            {{ related.stock }} left
-          </div>
+
         </div>
 
         <!-- Card Content -->

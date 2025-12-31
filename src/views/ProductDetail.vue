@@ -1,4 +1,4 @@
-<!-- ProductDetail.vue - Tambah isAuthenticated prop saja -->
+<!-- ProductDetail.vue - COMPLETE FIXED VERSION WITH FLYING ANIMATION -->
 <template>
   <div class="bg-white">
     <Navbar />
@@ -7,18 +7,11 @@
     <FlyingImageAnimation :show="showFlyingImage" :props="flyingImageProps" />
 
     <!-- Warning Modal -->
-    <WarningModal
-      :show="showWarningModal"
-      :message="warningMessage"
-      @close="closeWarningModal"
-    />
+    <WarningModal :show="showWarningModal" :message="warningMessage" @close="closeWarningModal" />
 
     <main class="py-20 sm:py-24 md:py-32 lg:py-25 relative overflow-hidden">
       <!-- Initial Loading State -->
-      <div
-        v-if="isProductLoading && !previousProduct"
-        class="text-center py-12"
-      >
+      <div v-if="isProductLoading && !previousProduct" class="text-center py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Loading />
         </div>
@@ -28,12 +21,7 @@
       <div v-else-if="error" class="text-center py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p class="text-lg text-red-600 mb-4">{{ error }}</p>
-          <button
-            @click="loadProductData"
-            class="text-amber-600 hover:underline"
-          >
-            Try again
-          </button>
+          <button @click="loadProductData" class="text-amber-600 hover:underline">Try again</button>
         </div>
       </div>
 
@@ -57,9 +45,9 @@
 
             <!-- Product Detail Section -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <!-- Product Images -->
+              <!-- ✅ FIX: Product Images dengan ref -->
               <ProductImageSection
-                ref="productImageSection"
+                ref="productImageRef"
                 :product="normalizedProduct"
                 :isLiked="isLiked"
                 :getProductImage="getProductImage"
@@ -69,7 +57,7 @@
                 @image-load="handleImageLoad"
               />
 
-              <!-- Product Info Section - TAMBAH isAuthenticated prop -->
+              <!-- ✅ FIX: Product Info Section dengan handler baru -->
               <ProductInfoSection
                 :product="normalizedProduct"
                 :quantity="quantity"
@@ -84,7 +72,7 @@
                 @increase-quantity="handleIncreaseQuantity"
                 @decrease-quantity="handleDecreaseQuantity"
                 @validate-quantity="validateQuantity"
-                @add-to-cart="handleAddToCart"
+                @add-to-cart="handleAddToCartClick"
                 @logo-error="handleLogoError"
                 v-model:quantity="quantity"
               />
@@ -105,7 +93,8 @@
               @toggle-like="handleRelatedLike"
               @logo-error="handleLogoError"
             />
-            <!-- Product Reviews - TAMBAH SECTION INI -->
+
+            <!-- Product Reviews -->
             <div class="mt-12">
               <ProductReviews
                 :reviews="productReviews"
@@ -121,19 +110,12 @@
         </div>
       </div>
 
-      <!-- ProductDetail.vue - Update error message -->
+      <!-- Not Found State -->
       <div v-else class="text-center py-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p class="text-lg text-gray-600">Product not found</p>
-          <p class="text-sm text-gray-500 mt-2">
-            Product Slug: {{ route.params.slug }}
-            <!-- Ubah dari route.params.id -->
-          </p>
-          <router-link
-            to="/"
-            class="mt-4 inline-block text-amber-600 hover:underline"
-            >Back to home</router-link
-          >
+          <p class="text-sm text-gray-500 mt-2">Product ID: {{ route.params.productId || route.params.slug }}</p>
+          <router-link to="/" class="mt-4 inline-block text-amber-600 hover:underline">Back to home</router-link>
         </div>
       </div>
     </main>
@@ -143,7 +125,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 // Layout Components
@@ -160,49 +142,69 @@ import RelatedProducts from "@/components/ProductDetail/RelatedProducts.vue";
 import ProductReviews from "@/components/ProductDetail/ProductReviews.vue";
 import WarningModal from "@/components/ProductDetail/WarningModal.vue";
 
-// UPDATED IMPORTS - Consolidated import from refactored composable
+// Composables
 import { useProductDetail } from "@/composables/useProduct";
-import { useAuth } from "@/composables/useAuth";
+import { useAuthStore } from "@/stores/authStore";
+import { useCartStore } from "@/stores/cartStore";
 
-// Route and Router setup - UNCHANGED
+// ============================================================================
+// SETUP
+// ============================================================================
+
 const route = useRoute();
 const router = useRouter();
+const productImageRef = ref(null); // ✅ TAMBAHAN: ref untuk ProductImageSection
 
-// Product Image Section Reference - UNCHANGED
-const productImageSection = ref(null);
+// Auth
+const { isAuthenticated } = useAuthStore();
 
-// Auth composable - UNCHANGED
-const { isAuthenticated } = useAuth();
+// Cart store for watcher
+const cartStore = useCartStore();
 
-// CONSOLIDATED COMPOSABLE - All logic now comes from one place
+// ✅ CRITICAL: Watcher stop functions at COMPONENT level (not composable)
+let routeWatcherStop = null;
+let cartWatcherStop = null;
+
+// ============================================================================
+// COMPOSABLE - Get all product detail logic
+// ============================================================================
+
 const {
-  // State - SAME NAMES as before
+  // State
   quantity,
-  relatedProducts,
+  currentProduct,
+  previousProduct,
+  normalizedProduct,
+  isProductLoading,
+  error,
+
+  // Reviews
   productReviews,
   reviewsRatingStats,
   reviewsPagination,
   isReviewsLoading,
   reviewsError,
-  previousProduct,
+
+  // Related products
+  relatedProducts,
+  isRelatedLoading,
+
+  // Wishlist
   isLiked,
+  likedProducts,
+
+  // UI
   showFlyingImage,
   flyingImageProps,
   showWarningModal,
   warningMessage,
 
-  // Computed - SAME NAMES as before
-  normalizedProduct,
-  isProductLoading,
-  error,
-  maxQuantity,
-  currentProduct,
-
-  // Cart state - SAME NAMES as before
+  // Cart
   cartCount,
   isCartLoading,
+  maxQuantity,
 
-  // Methods - SAME NAMES as before
+  // Methods
   loadProductData,
   loadProductReviews,
   handleReviewsPageChange,
@@ -217,13 +219,9 @@ const {
   handleImageLoad,
   handleImageError,
   closeWarningModal,
-
-  // Lifecycle - SAME NAMES as before
   initializeComponent,
-  watchCartCount,
-  watchRouteChanges,
 
-  // Helper functions - SAME NAMES as before (now from utils via composable)
+  // Helpers
   getProductTitle,
   getCategoryName,
   getCategorySlug,
@@ -237,11 +235,62 @@ const {
   handleLogoError,
 } = useProductDetail(route, router);
 
-// Lifecycle hooks - UNCHANGED
+// ============================================================================
+// ✅ TAMBAHAN: Wrapper method untuk add to cart dengan ref
+// ============================================================================
+
+const handleAddToCartClick = () => {
+  handleAddToCart(productImageRef);
+};
+
+// ============================================================================
+// LIFECYCLE - Component Level Watcher Management
+// ============================================================================
+
 onMounted(async () => {
+  const componentId = Math.random().toString(36).substr(2, 9);
+  // Initialize component - loads initial product
   await initializeComponent();
-  watchCartCount();
-  watchRouteChanges();
+
+  // ✅ Setup CART watcher
+  if (cartWatcherStop) {
+    cartWatcherStop();
+  }
+
+  cartWatcherStop = watch(
+    () => cartStore.cartCount,
+    newCount => {}
+  );
+
+  // ✅ Setup ROUTE watcher
+  if (routeWatcherStop) {
+    routeWatcherStop();
+  }
+
+  routeWatcherStop = watch(
+    () => route.params.productId || route.params.slug,
+    async (newId, oldId) => {
+      // ✅ CRITICAL: Only load if truly changed AND component already initialized
+      if (newId && newId !== oldId && currentProduct.value !== null) {
+        await nextTick();
+        await loadProductData();
+      } else {
+      }
+    }
+  );
+});
+
+// ✅ CRITICAL: Cleanup watchers on unmount
+onBeforeUnmount(() => {
+  if (routeWatcherStop) {
+    routeWatcherStop();
+    routeWatcherStop = null;
+  }
+
+  if (cartWatcherStop) {
+    cartWatcherStop();
+    cartWatcherStop = null;
+  }
 });
 </script>
 

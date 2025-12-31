@@ -1,150 +1,73 @@
 // services/cartService.js
 import { useApiClient } from "@/composables/useApiClient";
 
-class CartServiceClass {
-  constructor() {
-    this.apiClient = useApiClient();
-  }
+const apiClient = useApiClient();
 
+/**
+ * Cart API service
+ * Handles cart-related API calls only
+ */
+export const cartService = {
   /**
-   * Get user's cart with populated data
+   * Fetches the current user's cart
    */
   async getCart() {
-    try {
-      return await this.apiClient.get("/api/cart");
-    } catch (error) {
-      console.error("Failed to get cart:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.get("/api/cart");
+  },
 
   /**
-   * Add item to cart
+   * Adds a product to the cart
    */
   async addToCart(productId, quantity = 1) {
-    try {
-      const response = await this.apiClient.post("/api/cart", {
-        productId,
-        quantity,
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to add to cart:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.post("/api/cart", { productId, quantity });
+  },
 
   /**
-   * Update item quantity in cart
+   * Updates cart item quantity
    */
   async updateCartItem(productId, quantity) {
-    try {
-      const response = await this.apiClient.put(`/api/cart/${productId}`, {
-        quantity,
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to update cart item:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.put(`/api/cart/${productId}`, { quantity });
+  },
 
   /**
-   * Remove item from cart
+   * Removes an item from the cart
    */
   async removeFromCart(productId) {
-    try {
-      const response = await this.apiClient.delete(`/api/cart/${productId}`);
-      return response;
-    } catch (error) {
-      console.error("Failed to remove from cart:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.delete(`/api/cart/${productId}`);
+  },
 
   /**
-   * Clear entire cart
+   * Clears all cart items
    */
   async clearCart() {
-    try {
-      const response = await this.apiClient.delete("/api/cart");
-      return response;
-    } catch (error) {
-      console.error("Failed to clear cart:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.delete("/api/cart");
+  },
 
   /**
-   * Apply coupon to cart
+   * Applies a coupon code
    */
   async applyCoupon(couponCode) {
-    try {
-      const response = await this.apiClient.post("/api/cart/coupon", {
-        couponCode,
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to apply coupon:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.post("/api/cart/coupon", { couponCode });
+  },
 
   /**
-   * Remove coupon from cart
+   * Removes applied coupon
    */
   async removeCoupon() {
-    try {
-      const response = await this.apiClient.delete("/api/cart/coupon");
-      return response;
-    } catch (error) {
-      console.error("Failed to remove coupon:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.delete("/api/cart/coupon");
+  },
 
   /**
-   * Get cart items count
+   * Fetches cart item count only
    */
   async getCartCount() {
-    try {
-      const response = await this.apiClient.get("/api/cart/count");
-      return response;
-    } catch (error) {
-      console.error("Failed to get cart count:", error);
-      throw this.handleError(error);
-    }
-  }
+    return apiClient.get("/api/cart/count");
+  },
+
   /**
-   * Batch update multiple cart items
+   * Batch updates cart items
    */
   async batchUpdateCart(updates) {
-    try {
-      const response = await this.apiClient.put("/api/cart/batch", {
-        updates,
-      });
-      return response;
-    } catch (error) {
-      console.error("Failed to batch update cart:", error);
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Handle API errors consistently
-   */
-  handleError(error) {
-    // Return standardized error format
-    return {
-      success: false,
-      message: error.message || "An error occurred",
-      status: error.status || 500,
-      errors: error.errors || [],
-      isNetworkError: error.isNetworkError || false,
-    };
-  }
-}
-
-// Export singleton instance
-export const cartService = new CartServiceClass();
-export default cartService;
+    return apiClient.put("/api/cart/batch", { updates });
+  },
+};

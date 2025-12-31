@@ -118,10 +118,10 @@ const handleConfirm = () => {
 
   const reasonLabel = cancelReasons.find(r => r.value === selectedReason.value)?.label;
   
-  // ✅ FIX: Emit dengan benar - reason sebagai string, bukan reasonValue
+  // ✅ Emit reason as label (human-readable)
   emit("confirm", {
     orderId: props.order.id,
-    reason: reasonLabel,  // ← GANTI dari reasonValue ke reason
+    reason: reasonLabel,
   });
 };
 </script>

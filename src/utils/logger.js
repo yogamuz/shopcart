@@ -39,9 +39,6 @@ export const logger = {
     log.debug('🔑 Token set in request:', url);
   },
 
-  tokenMissing: (url) => {
-    log.debug('⚠️ No token available for request:', url);
-  },
 
   tokenRefresh: (message, data = null) => {
     log.info('🔄', message, data || '');

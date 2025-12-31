@@ -1,4 +1,4 @@
-<!-- navaccountcart -->
+<!-- NavAccountCart.vue - Fixed with direct store usage -->
 <template>
   <div class="flex items-center space-x-4 sm:space-x-6">
     <!-- Account Button/Dropdown -->
@@ -214,7 +214,7 @@
         @click="handleNavigation('/cart')"
         class="hidden sm:flex items-center space-x-2 text-white hover:text-blue-600 transition-colors duration-200 relative"
       >
-        <div class="relative">
+        <div class="relative" data-cart-icon>
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -225,7 +225,7 @@
           </svg>
 
           <div
-            v-if="isUserAuthenticated() && cartCount > 0"
+            v-if="shouldShowCartBadge"
             class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium shadow-sm"
             :class="{ 'animate-pulse': cartCount > 99 }"
           >
@@ -257,97 +257,217 @@
     @success="handleLoginSuccess"
   />
 </template>
-
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
-import { useAuth } from "@/composables/useAuth";
-import { useCart } from "@/composables/useCart";
-import { useUserProfile } from "@/composables/useUserProfile";
+import { toRefs } from "vue";
+import { storeToRefs } from "pinia";
+import { useAuthStore } from "@/stores/authStore";
+import { useUserProfileStore } from "@/stores/userProfileStore";
+import { useCartStore } from "@/stores/cartStore";
 import AuthModal from "@/components/Auth/AuthModal.vue";
 
-// Composables
-const { cartCount, isUserAuthenticated } = useCart();
-const { profileDisplayName, profileInitials, avatarUrl: profileAvatarUrl } = useUserProfile();
+// ============================================================================
+// STORES INITIALIZATION
+// ============================================================================
 
 const router = useRouter();
-const { user, isAuthenticated, isSeller, isAdmin, logout, isLoading } = useAuth();
+const authStore = useAuthStore();
+const profileStore = useUserProfileStore();
 
-// Local state
+// ✅ FIXED: Cart store dengan storeToRefs untuk reactivity
+const cartStore = useCartStore();
+const { cartCount } = storeToRefs(cartStore);
+
+// ✅ FIXED: Auth store dengan toRefs
+const { user, isAuthenticated, isSeller, isAdmin, isLoading } = toRefs(authStore);
+
+// ============================================================================
+// LOCAL STATE
+// ============================================================================
+
 const showAccountMenu = ref(false);
 const accountContainer = ref(null);
 const showAuthModal = ref(false);
 const authModalMode = ref("login");
 
-// Computed - Generate display name with fallback priority
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+
+/**
+ * User display name dengan fallback priority
+ */
 const userDisplayName = computed(() => {
-  if (profileDisplayName.value && profileDisplayName.value !== "User") {
-    return profileDisplayName.value;
+  // Prioritas 1: Profile store fullName
+  if (profileStore.profile && profileStore.fullName && profileStore.fullName !== "User") {
+    return profileStore.fullName;
   }
-  if (!user.value) return "User";
-  if (user.value.name && user.value.name !== "User") {
-    return user.value.name;
-  }
-  if (user.value.username && user.value.username !== "User") {
+
+  // Prioritas 2: Auth user username
+  if (user.value?.username && user.value.username !== "User") {
     return user.value.username;
   }
-  if (user.value.email) {
+
+  // Prioritas 3: Auth user name
+  if (user.value?.name && user.value.name !== "User") {
+    return user.value.name;
+  }
+
+  // Prioritas 4: Email prefix
+  if (user.value?.email) {
     return user.value.email.split("@")[0];
   }
+
   return "User";
 });
 
-// Computed - Generate user initials from display name
+/**
+ * User initials untuk avatar
+ */
 const userInitials = computed(() => {
-  if (profileInitials.value && profileInitials.value !== "U") {
-    return profileInitials.value;
+  // Prioritas 1: Profile store initials
+  if (profileStore.profile && profileStore.initials && profileStore.initials !== "U") {
+    return profileStore.initials;
   }
-  if (!user.value) return "U";
+
+  // Prioritas 2: Generate dari username
+  if (user.value?.username) {
+    const username = user.value.username;
+    return username.slice(0, 2).toUpperCase();
+  }
+
+  // Prioritas 3: Generate dari display name
   const displayName = userDisplayName.value;
-  if (displayName === "User") {
-    if (user.value.email) {
-      const emailName = user.value.email.split("@")[0];
-      return emailName.slice(0, 2).toUpperCase();
+  if (displayName !== "User") {
+    const words = displayName.split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
     }
-    return "U";
+    return displayName.slice(0, 2).toUpperCase();
   }
-  const words = displayName.split(" ");
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
+
+  // Prioritas 4: Email prefix
+  if (user.value?.email) {
+    const emailName = user.value.email.split("@")[0];
+    return emailName.slice(0, 2).toUpperCase();
   }
-  return displayName.slice(0, 2).toUpperCase();
+
+  return "U";
 });
 
-// Computed - Check if avatar is still loading
+/**
+ * Profile avatar URL dengan fallback
+ */
+const profileAvatarUrl = computed(() => {
+  // Check profile store first
+  if (profileStore.profile && profileStore.avatarUrl) {
+    return profileStore.avatarUrl;
+  }
+
+  // Fallback to user avatar if exists
+  if (user.value?.avatar) {
+    if (typeof user.value.avatar === "string") {
+      return user.value.avatar;
+    }
+    if (user.value.avatar.url) {
+      return user.value.avatar.url;
+    }
+  }
+
+  return null;
+});
+
+/**
+ * Check if avatar is loading
+ */
 const isLoadingAvatar = computed(() => {
-  return isAuthenticated.value && !profileDisplayName.value;
+  return isAuthenticated.value && profileStore.loading;
 });
 
-// Watch - Preload avatar image when URL changes
-watch(profileAvatarUrl, newUrl => {
-  if (newUrl) {
-    const img = new Image();
-    img.src = newUrl;
+/**
+ * ✅ FIXED: Helper untuk cart badge visibility
+ */
+const shouldShowCartBadge = computed(() => {
+  return isAuthenticated.value && cartCount.value > 0;
+});
+
+// ============================================================================
+// WATCHERS
+// ============================================================================
+
+/**
+ * Preload avatar image
+ */
+watch(
+  () => profileStore.avatarUrl,
+  newUrl => {
+    if (newUrl) {
+      const img = new Image();
+      img.src = newUrl;
+    }
+  },
+  { immediate: true }
+);
+
+/**
+ * Fetch profile on authentication change
+ */
+watch(isAuthenticated, async (newVal, oldVal) => {
+  // Only fetch when state changes from false → true
+  if (newVal && !oldVal) {
+    // User just logged in
+    await nextTick();
+
+    try {
+      await profileStore.fetchProfile(true);
+    } catch (err) {
+      console.warn("⚠️ Failed to fetch profile:", err);
+    }
+  } else if (!newVal && oldVal) {
+    // User logged out
+    profileStore.clearProfile();
   }
 });
 
-// Methods - Getter functions for template
+/**
+ * Watch profile changes
+ */
+watch(
+  () => profileStore.profile,
+  newProfile => {},
+  { deep: true }
+);
+
+// ============================================================================
+// METHODS
+// ============================================================================
+
+/**
+ * Getter functions for template
+ */
 const getUserDisplayName = () => userDisplayName.value;
 const getUserInitials = () => userInitials.value;
 
-// Toggle account dropdown menu
+/**
+ * Toggle account dropdown menu
+ */
 const toggleAccountMenu = event => {
   event.preventDefault();
   event.stopPropagation();
   showAccountMenu.value = !showAccountMenu.value;
 };
 
-// Close account dropdown menu
+/**
+ * Close account dropdown menu
+ */
 const closeAccountMenu = () => {
   showAccountMenu.value = false;
 };
 
-// Handle navigation with auth modal interception
+/**
+ * Handle navigation with auth modal interception
+ */
 const handleNavigation = async path => {
   try {
     closeAccountMenu();
@@ -375,52 +495,100 @@ const handleNavigation = async path => {
   }
 };
 
-// Handle user logout
+/**
+ * Handle logout with proper cleanup
+ */
 const handleLogout = async () => {
   try {
     closeAccountMenu();
-    await logout();
+
+    // Clear profile first
+    profileStore.clearProfile();
+
+    // Then logout from auth store
+    await authStore.logout();
+
+    // Navigate to home
     if (router.currentRoute.value.path !== "/") {
       await router.push("/");
     }
   } catch (err) {
-    console.error("Logout error:", err);
+    console.error("❌ Logout error:", err);
   }
 };
 
-// Handle avatar image load error
+/**
+ * Handle avatar image load error
+ */
 const handleAvatarError = event => {
+  console.warn("⚠️ Avatar load error, hiding image");
   event.target.style.display = "none";
 };
 
-// Close dropdown when clicking outside
+/**
+ * Close dropdown when clicking outside
+ */
 const handleClickOutside = event => {
   if (accountContainer.value && !accountContainer.value.contains(event.target)) {
     closeAccountMenu();
   }
 };
 
-// Close auth modal
+/**
+ * Close auth modal
+ */
 const closeAuthModal = () => {
   showAuthModal.value = false;
 };
 
-// Handle successful login from modal
-const handleLoginSuccess = () => {
+/**
+ * Handle login success with immediate profile fetch
+ */
+const handleLoginSuccess = async () => {
   showAuthModal.value = false;
+
+  // Wait a bit for auth state to settle
+  await nextTick();
+
+  // Force fetch profile
+  try {
+    await profileStore.fetchProfile(true);
+  } catch (err) {
+    console.warn("⚠️ Failed to fetch profile after login:", err);
+  }
 };
 
-// Handle successful registration from modal
-const handleRegisterSuccess = () => {
+/**
+ * Handle register success with immediate profile fetch
+ */
+const handleRegisterSuccess = async () => {
   showAuthModal.value = false;
+
+  // Wait a bit for auth state to settle
+  await nextTick();
+
+  // Force fetch profile
+  try {
+    await profileStore.fetchProfile(true);
+  } catch (err) {
+    console.warn("⚠️ Failed to fetch profile after register:", err);
+  }
 };
 
-// Lifecycle - Setup click outside listener
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+/**
+ * Setup click outside listener
+ */
 onMounted(() => {
   document.addEventListener("click", handleClickOutside, { passive: true });
 });
 
-// Lifecycle - Cleanup listeners
+/**
+ * Cleanup listeners
+ */
 onUnmounted(() => {
   closeAccountMenu();
   document.removeEventListener("click", handleClickOutside);

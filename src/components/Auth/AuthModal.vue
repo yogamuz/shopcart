@@ -1,6 +1,5 @@
-<!-- AuthModal.vue - FINAL FIX with Teleport -->
+<!-- AuthModal.vue - Updated for race-free auth store -->
 <template>
-  <!-- SOLUTION: Use Teleport to render modal at body level, bypassing all parent constraints -->
   <Teleport to="body">
     <div v-if="isModalOpen" class="modal-overlay" @click.self="handleOverlayClick">
       <div class="modal-content">
@@ -59,7 +58,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useAuth } from "@/composables/useAuth";
+import { useAuthStore } from "@/stores/authStore";
 
 // Import child components
 import ModalHeader from "../Auth/ModalHeader.vue";
@@ -91,8 +90,8 @@ const props = defineProps({
 const emit = defineEmits(["close", "success", "login-success", "register-success"]);
 const isModalOpen = computed(() => props.show || props.isOpen);
 
-// Composables
-const { login, register, requestPasswordReset, resetPassword, checkUsernameAvailability: checkUsernameAPI } = useAuth();
+// Store
+const authStore = useAuthStore();
 
 // Local state
 const currentMode = ref("login");
@@ -234,7 +233,7 @@ const handleSendOtp = async () => {
     formLoading.value = true;
     clearMessages();
 
-    await requestPasswordReset(forgotForm.value.email);
+    await authStore.requestPasswordReset(forgotForm.value.email);
 
     formSuccess.value = "OTP sent successfully! Check your email.";
 
@@ -277,13 +276,13 @@ const handleResetPassword = async () => {
     formLoading.value = true;
     clearMessages();
 
-    await resetPassword(forgotForm.value.email, forgotForm.value.otpCode, forgotForm.value.newPassword);
+    await authStore.resetPassword(forgotForm.value.email, forgotForm.value.otpCode, forgotForm.value.newPassword);
 
     formSuccess.value = "Password reset successful! Logging you in...";
 
     setTimeout(async () => {
       try {
-        await login({
+        await authStore.login({
           email: forgotForm.value.email,
           password: forgotForm.value.newPassword,
         });
@@ -344,25 +343,36 @@ const handleLogin = async () => {
     formLoading.value = true;
     clearMessages();
 
-    await login({
+    console.log("🔐 Attempting login...");
+
+    await authStore.login({
       email: loginForm.value.email.trim(),
       password: loginForm.value.password,
     });
 
+    console.log("✅ Login successful");
+
     formSuccess.value = "Login successful! Welcome back.";
+
+    // ✅ TAMBAHAN: Wait for auth state to settle
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     setTimeout(() => {
       emit("success", "login");
+      emit("login-success"); // ← Pastikan emit ini dipanggil
       emit("close");
       resetForms();
-    }, 1500);
+    }, 1000);
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("❌ Login error:", error);
     formError.value = error.message || "Login failed. Please try again.";
   } finally {
     formLoading.value = false;
   }
 };
+
+// ✅ REVISI: Function handleRegister (Baris 366-415)
+// GANTI seluruh function dengan versi ini:
 
 const handleRegister = async () => {
   if (!isRegisterFormValid.value) return;
@@ -381,23 +391,31 @@ const handleRegister = async () => {
     formLoading.value = true;
     clearMessages();
 
+    console.log("📝 Attempting registration...");
+
     const userData = {
       username: registerForm.value.username.trim(),
       email: registerForm.value.email.trim(),
       password: registerForm.value.password,
     };
 
-    await register(userData);
+    await authStore.register(userData);
+
+    console.log("✅ Registration successful");
 
     formSuccess.value = "Account created successfully! You are now logged in.";
 
+    // ✅ TAMBAHAN: Wait for auth state to settle
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     setTimeout(() => {
       emit("success", "register");
+      emit("register-success"); // ← Pastikan emit ini dipanggil
       emit("close");
       resetForms();
-    }, 1500);
+    }, 1000);
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("❌ Registration error:", error);
 
     if (error.errors && Array.isArray(error.errors)) {
       const firstError = error.errors[0];
@@ -436,7 +454,7 @@ const checkUsernameAvailability = async username => {
 
   try {
     usernameAvailability.value.checking = true;
-    const result = await checkUsernameAPI(username);
+    const result = await authStore.checkUsernameAvailability(username);
 
     usernameAvailability.value = {
       checking: false,

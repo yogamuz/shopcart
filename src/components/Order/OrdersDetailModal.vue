@@ -641,6 +641,7 @@ import { computed, watch, ref, reactive, onMounted, onUnmounted } from "vue";
 import { Store } from "lucide-vue-next";
 import OrderStatusBadge from "./OrderStatusBadge.vue";
 import PaymentStatusBadge from "./PaymentStatusBadge.vue";
+import { useOrderUtils } from "@/composables/useOrderUtils";
 
 const props = defineProps({
   order: {
@@ -658,6 +659,7 @@ const emit = defineEmits(["close", "pay", "cancel", "confirm-delivery", "update-
 // State for editing reviews
 const editingReview = reactive({});
 const isSubmittingReview = ref(false);
+const { formatOrderStatus, getOrderStatusColor, getTimeUntilExpiry: utilGetTimeUntilExpiry } = useOrderUtils();
 const currentTime = ref(Date.now());
 const preservedOrderData = computed(() => {
   if (!props.order) return null;

@@ -88,6 +88,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { useOrderStore } from "@/stores/orderStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useWallet } from "@/composables/useWallet";
+import { useOrderUtils } from "@/composables/useOrderUtils";
 
 // Import components
 import CheckoutHeader from "@/components/Order/CheckoutHeader.vue";
@@ -107,6 +108,7 @@ const route = useRoute();
 const router = useRouter();
 const cartStore = useCartStore();
 const orderStore = useOrderStore();
+const orderUtils = useOrderUtils();
 const authStore = useAuthStore();
 const { payOrder } = useWallet();
 
@@ -158,8 +160,6 @@ watch(
 
 const viewOrderDetail = async (order, parcel = null) => {
   try {
-
-
     if (parcel?.parcelId) {
       orderStore.setSelectedParcel(parcel.parcelId);
 
@@ -168,7 +168,6 @@ const viewOrderDetail = async (order, parcel = null) => {
 
     await orderStore.fetchOrderById(order.id, true);
     await nextTick();
-
 
     showOrderDetail.value = true;
   } catch (error) {
@@ -309,10 +308,8 @@ const handleCancelConfirm = async cancelData => {
   try {
     isCancellingOrder.value = true;
 
-    // ✅ TAMBAHKAN prefix "Reason:" di sini
-    const formattedReason = `Reason: ${cancelData.reason}`;
-
-    const result = await orderStore.cancelOrder(cancelData.orderId, formattedReason);
+    // ✅ FIXED: Pass reason directly, backend handles formatting
+    const result = await orderStore.cancelOrder(cancelData.orderId, cancelData.reason);
 
     if (result.success) {
       showCancelModal.value = false;

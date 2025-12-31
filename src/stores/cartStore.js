@@ -1,106 +1,91 @@
-// stores/cartStore.js - Pinia Cart Store
+// stores/cartStore.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import cartService from "@/services/cartService";
+import { cartService } from "@/services/cartService";
 import { useAuthStore } from "@/stores/authStore";
 
 export const useCartStore = defineStore("cart", () => {
-  // State
   const cart = ref(null);
   const cartItems = ref([]);
+  const appliedCoupon = ref(null);
   const isLoading = ref(false);
   const error = ref(null);
-  const pendingUpdates = ref(new Map()); // Track pending updates per productId
-  const batchUpdateTimer = ref(null); // Timeout ID for batching
-  const appliedCoupon = ref(null);
+  // Batch update management
+  const pendingUpdates = ref(new Map());
+  const batchUpdateTimer = ref(null);
 
+  /**
+   * Total number of unique items in cart
+   */
   const cartCount = computed(() => {
-    // Use summary data from API if available
-    if (cart.value?.summary?.itemsCount !== undefined) {
-      return cart.value.summary.itemsCount;
-    }
-
-    // Fallback to array length
-    const count = cartItems.value?.length || 0;
-    return isNaN(count) ? 0 : Math.max(0, count);
+    return cart.value?.summary?.itemsCount ?? cartItems.value.length;
   });
 
+  /**
+   * Total quantity of all items combined
+   */
   const totalQuantities = computed(() => {
-    if (!Array.isArray(cartItems.value) || cartItems.value.length === 0) {
-      return 0;
-    }
+    if (!cartItems.value.length) return 0;
 
-    const total = cartItems.value.reduce((sum, item) => {
-      const quantity = parseInt(item.quantity) || 0;
-      return sum + quantity;
+    return cartItems.value.reduce((sum, item) => {
+      return sum + (parseInt(item.quantity) || 0);
     }, 0);
-
-    // Ensure we never return NaN
-    return isNaN(total) ? 0 : Math.max(0, total);
   });
 
+  /**
+   * Subtotal before discounts and shipping
+   */
   const subtotal = computed(() => {
-    // Use summary data from API if available
     if (cart.value?.summary?.subtotal !== undefined) {
       return cart.value.summary.subtotal;
     }
 
-    // Fallback to calculation
-    if (!Array.isArray(cartItems.value) || cartItems.value.length === 0) {
-      return 0;
-    }
+    if (!cartItems.value.length) return 0;
 
-    const total = cartItems.value.reduce((sum, item) => {
-      const price =
-        parseFloat(
-          item.unitPrice || item.product?.currentPrice || item.product?.price
-        ) || 0;
+    return cartItems.value.reduce((sum, item) => {
+      const price = parseFloat(item.unitPrice || item.product?.price) || 0;
       const quantity = parseInt(item.quantity) || 0;
       return sum + price * quantity;
     }, 0);
-
-    return isNaN(total) ? 0 : Math.max(0, total);
   });
 
+  /**
+   * Discount amount from applied coupon
+   */
   const discountAmount = computed(() => {
     return appliedCoupon.value?.discountAmount || 0;
   });
 
+  /**
+   * Final total after discounts
+   */
   const total = computed(() => {
-    const finalTotal = subtotal.value - discountAmount.value;
-    return Math.max(0, finalTotal); // Ensure total is never negative
+    return Math.max(0, subtotal.value - discountAmount.value);
   });
 
-  const isInCart = computed(() => (productId) => {
-    if (!Array.isArray(cartItems.value) || !productId) return false;
-    return cartItems.value.some(
-      (item) =>
-        (item.product?._id || item.product?.id) === productId ||
-        (item.productId || item.product_id) === productId
-    );
+  /**
+   * Check if a product is in the cart
+   */
+  const isInCart = computed(() => productId => {
+    if (!cartItems.value.length || !productId) return false;
+
+    return cartItems.value.some(item => item.product?._id === productId || item.productId === productId);
   });
 
-  const getQuantity = computed(() => (productId) => {
-    if (!Array.isArray(cartItems.value) || !productId) return 0;
-    const item = cartItems.value.find(
-      (item) =>
-        (item.product?._id || item.product?.id) === productId ||
-        (item.productId || item.product_id) === productId
-    );
-    const quantity = parseInt(item?.quantity) || 0;
-    return isNaN(quantity) ? 0 : Math.max(0, quantity);
+  /**
+   * Get quantity of a specific product in cart
+   */
+  const getQuantity = computed(() => productId => {
+    if (!cartItems.value.length || !productId) return 0;
+
+    const item = cartItems.value.find(item => item.product?._id === productId || item.productId === productId);
+
+    return parseInt(item?.quantity) || 0;
   });
-
-  // Actions
-  const clearError = () => {
-    error.value = null;
-  };
-
-  const setLoading = (loading) => {
-    isLoading.value = loading;
-  };
-
-  const updateCartData = (cartData) => {
+  /**
+   * Updates cart state from API response
+   */
+  function updateCartData(cartData) {
     if (cartData) {
       cart.value = cartData;
       cartItems.value = Array.isArray(cartData.items) ? cartData.items : [];
@@ -110,12 +95,59 @@ export const useCartStore = defineStore("cart", () => {
       cartItems.value = [];
       appliedCoupon.value = null;
     }
-  };
+  }
 
   /**
-   * Initialize cart - fetch current cart data
+   * Handles API response and updates state accordingly
    */
-  const initializeCart = async () => {
+  function handleApiResponse(response, successMessage = null) {
+    if (response.success) {
+      if (response.data) {
+        updateCartData(response.data.cart || response.data);
+      }
+      return {
+        success: true,
+        message: response.message || successMessage,
+        data: response.data,
+      };
+    } else {
+      error.value = response.message;
+      return {
+        success: false,
+        message: response.message,
+      };
+    }
+  }
+
+  /**
+   * Sends batched quantity updates to API
+   */
+  async function sendBatchUpdate() {
+    if (pendingUpdates.value.size === 0) return;
+
+    try {
+      const updates = Array.from(pendingUpdates.value.entries()).map(([productId, quantity]) => ({
+        productId,
+        quantity,
+      }));
+
+      const response = await cartService.batchUpdateCart(updates);
+
+      if (response.success) {
+        updateCartData(response.data);
+      }
+
+      pendingUpdates.value.clear();
+    } catch (err) {
+      console.error("Batch update failed:", err);
+      await initializeCart();
+    }
+  }
+  /**
+   * Initializes cart by fetching from API
+   * Called on app mount or after login
+   */
+  async function initializeCart() {
     const authStore = useAuthStore();
 
     if (!authStore.isAuthenticated) {
@@ -124,17 +156,15 @@ export const useCartStore = defineStore("cart", () => {
     }
 
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.getCart();
 
       if (response.success) {
         updateCartData(response.data);
-
         return { success: true, data: response.data };
       } else {
-        console.warn("Failed to initialize cart:", response.message);
         updateCartData(null);
         return { success: false, message: response.message };
       }
@@ -142,49 +172,40 @@ export const useCartStore = defineStore("cart", () => {
       console.error("Cart initialization error:", err);
       error.value = err.message || "Failed to load cart";
       updateCartData(null);
-      return { success: false, message: err.message || "Failed to load cart" };
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Refresh cart data
+   * Refreshes cart data from API
    */
-  const refreshCart = async () => {
+  async function refreshCart() {
     return await initializeCart();
-  };
+  }
 
   /**
-   * Get cart count only (lightweight)
+   * Fetches only the cart count (lightweight operation)
    */
-  const refreshCartCount = async () => {
+  async function refreshCartCount() {
     const authStore = useAuthStore();
 
-    if (!authStore.isAuthenticated) {
-      return 0;
-    }
+    if (!authStore.isAuthenticated) return 0;
 
     try {
       const response = await cartService.getCartCount();
-
-      if (response.success) {
-        const count = parseInt(response.data.count) || 0;
-        const validCount = isNaN(count) ? 0 : Math.max(0, count);
-        return validCount;
-      }
-
-      return 0;
+      return response.success ? parseInt(response.data.count) || 0 : 0;
     } catch (err) {
       console.error("Failed to refresh cart count:", err);
       return 0;
     }
-  };
+  }
 
   /**
-   * Add item to cart
+   * Adds a product to the cart
    */
-  const addToCart = async (productId, quantity = 1) => {
+  async function addToCart(productId, quantity = 1) {
     const authStore = useAuthStore();
 
     if (!authStore.isAuthenticated) {
@@ -196,175 +217,100 @@ export const useCartStore = defineStore("cart", () => {
     }
 
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.addToCart(productId, quantity);
-
-      if (response.success) {
-        updateCartData(response.data);
-        return {
-          success: true,
-          message: response.message || "Item added to cart",
-          data: response.data,
-        };
-      } else {
-        error.value = response.message;
-        return { success: false, message: response.message };
-      }
+      return handleApiResponse(response, "Item added to cart");
     } catch (err) {
       console.error("Add to cart error:", err);
-      error.value = err.message || "Failed to add item to cart";
-      return {
-        success: false,
-        message: err.message || "Failed to add item to cart",
-      };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Update cart item quantity
+   * Updates cart item quantity immediately
    */
-  const updateCartItem = async (productId, quantity) => {
+  async function updateCartItem(productId, quantity) {
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.updateCartItem(productId, quantity);
-
-      if (response.success) {
-        updateCartData(response.data);
-        return {
-          success: true,
-          message: response.message,
-          data: response.data,
-        };
-      } else {
-        error.value = response.message;
-        return { success: false, message: response.message };
-      }
+      return handleApiResponse(response);
     } catch (err) {
       console.error("Update cart item error:", err);
-      error.value = err.message || "Failed to update cart item";
-      return {
-        success: false,
-        message: err.message || "Failed to update cart item",
-      };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
-
-  const updateQuantityBatched = (productId, quantity) => {
-  // Store pending update
-  pendingUpdates.value.set(productId, quantity)
-  
-  // Clear existing timer
-  if (batchUpdateTimer.value) {
-    clearTimeout(batchUpdateTimer.value)
   }
-  
-  // Set new timer to batch send after 1 second
-  batchUpdateTimer.value = setTimeout(async () => {
-    await sendBatchUpdate()
-  }, 1000)
-}
-const sendBatchUpdate = async () => {
-  if (pendingUpdates.value.size === 0) return
-  
-  try {
-    // Send all updates in one request
-    const updates = Array.from(pendingUpdates.value.entries()).map(([productId, quantity]) => ({
-      productId,
-      quantity
-    }))
-    
-    const result = await cartService.batchUpdateCart(updates)
-    
-    if (result.success) {
-      updateCartData(result.data)
-    }
-    
-    pendingUpdates.value.clear()
-  } catch (error) {
-    console.error('Batch update failed:', error)
-    // Refresh cart to get correct state
-    await refreshCart()
-  }
-}
 
   /**
-   * Remove item from cart
+   * Queues quantity update for batched API call
+   * Useful for rapid increment/decrement actions
    */
-  const removeFromCart = async (productId) => {
+  function updateQuantityBatched(productId, quantity) {
+    pendingUpdates.value.set(productId, quantity);
+
+    if (batchUpdateTimer.value) {
+      clearTimeout(batchUpdateTimer.value);
+    }
+
+    batchUpdateTimer.value = setTimeout(async () => {
+      await sendBatchUpdate();
+    }, 1000);
+  }
+
+  /**
+   * Removes an item from the cart
+   */
+  async function removeFromCart(productId) {
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.removeFromCart(productId);
-
-      if (response.success) {
-        updateCartData(response.data);
-        return {
-          success: true,
-          message: response.message || "Item removed from cart",
-          data: response.data,
-        };
-      } else {
-        error.value = response.message;
-        return { success: false, message: response.message };
-      }
+      return handleApiResponse(response, "Item removed from cart");
     } catch (err) {
       console.error("Remove from cart error:", err);
-      error.value = err.message || "Failed to remove item from cart";
-      return {
-        success: false,
-        message: err.message || "Failed to remove item from cart",
-      };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Clear entire cart
+   * Clears all items from the cart
    */
-  const clearCart = async () => {
+  async function clearCart() {
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.clearCart();
-
-      if (response.success) {
-        updateCartData(response.data);
-        return {
-          success: true,
-          message: response.message || "Cart cleared",
-          data: response.data,
-        };
-      } else {
-        error.value = response.message;
-        return { success: false, message: response.message };
-      }
+      return handleApiResponse(response, "Cart cleared");
     } catch (err) {
       console.error("Clear cart error:", err);
-      error.value = err.message || "Failed to clear cart";
-      return { success: false, message: err.message || "Failed to clear cart" };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Apply coupon to cart
+   * Applies a coupon code to the cart
    */
-  const applyCoupon = async (couponCode) => {
+  async function applyCoupon(couponCode) {
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.applyCoupon(couponCode);
 
@@ -381,23 +327,20 @@ const sendBatchUpdate = async () => {
       }
     } catch (err) {
       console.error("Apply coupon error:", err);
-      error.value = err.message || "Failed to apply coupon";
-      return {
-        success: false,
-        message: err.message || "Failed to apply coupon",
-      };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Remove coupon from cart
+   * Removes the currently applied coupon
    */
-  const removeCoupon = async () => {
+  async function removeCoupon() {
     try {
-      setLoading(true);
-      clearError();
+      isLoading.value = true;
+      error.value = null;
 
       const response = await cartService.removeCoupon();
 
@@ -407,7 +350,6 @@ const sendBatchUpdate = async () => {
         return {
           success: true,
           message: response.message || "Coupon removed",
-          data: response.data,
         };
       } else {
         error.value = response.message;
@@ -415,26 +357,34 @@ const sendBatchUpdate = async () => {
       }
     } catch (err) {
       console.error("Remove coupon error:", err);
-      error.value = err.message || "Failed to remove coupon";
-      return {
-        success: false,
-        message: err.message || "Failed to remove coupon",
-      };
+      error.value = err.message;
+      return { success: false, message: err.message };
     } finally {
-      setLoading(false);
+      isLoading.value = false;
     }
-  };
+  }
 
   /**
-   * Reset cart state (for logout)
+   * Resets cart state (called on logout)
    */
-  const resetCart = () => {
+  function resetCart() {
     cart.value = null;
     cartItems.value = [];
     appliedCoupon.value = null;
     error.value = null;
     isLoading.value = false;
-  };
+    pendingUpdates.value.clear();
+    if (batchUpdateTimer.value) {
+      clearTimeout(batchUpdateTimer.value);
+    }
+  }
+
+  /**
+   * Clears error state
+   */
+  function clearError() {
+    error.value = null;
+  }
 
   return {
     // State
@@ -466,6 +416,5 @@ const sendBatchUpdate = async () => {
     removeCoupon,
     resetCart,
     clearError,
-    setLoading,
   };
 });

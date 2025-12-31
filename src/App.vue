@@ -1,28 +1,33 @@
-<!-- App.vue - FIXED -->
 <template>
   <RouterView />
 </template>
 
 <script setup>
-import { RouterView } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
-import { useUserProfile } from '@/composables/useUserProfile';
-import { onMounted } from 'vue';
+import { onMounted } from "vue";
+import { useAuthStore } from "@/stores/authStore";
+import { useUserProfileStore } from "@/stores/userProfileStore";
+import { useCartStore } from "@/stores/cartStore";
 
 const authStore = useAuthStore();
-const { initialize: initializeProfile, isInitialized } = useUserProfile();
+const profileStore = useUserProfileStore();
+const cartStore = useCartStore();
 
+// Initialize auth ONCE
 onMounted(async () => {
   try {
-    // 1. Initialize auth (restore token, user data)
     await authStore.initialize();
 
-    // 2. Jika user sudah authenticated, initialize profile SEKALI aja
-    if (authStore.isAuthenticated && !isInitialized.value) {
-      await initializeProfile();
+    if (authStore.isAuthenticated) {
+      // Fetch profile
+      await profileStore.fetchProfile(true);
+
+      // ✅ CRITICAL FIX: Initialize cart after auth
+      await cartStore.initializeCart();
     }
   } catch (err) {
-    console.warn('Init error:', err);
+    console.warn("⚠️ Init error:", err);
   }
 });
 </script>
+
+<style></style>

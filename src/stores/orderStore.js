@@ -1,11 +1,22 @@
-// stores/orderStore.js
+// stores/orderStore.js - Refactored Clean Version
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import orderService from "@/services/orderService";
-import { update } from "lodash";
+import { orderService } from "@/services/orderService";
+import { useOrderNormalizer } from "@/composables/useOrderNormalizer";
+import { useOrderUtils } from "@/composables/useOrderUtils";
 
 export const useOrderStore = defineStore("orders", () => {
-  // State
+  // ============================================================================
+  // COMPOSABLES
+  // ============================================================================
+  
+  const { normalizeOrderData } = useOrderNormalizer();
+  const orderUtils = useOrderUtils();
+
+  // ============================================================================
+  // STATE
+  // ============================================================================
+  
   const orders = ref([]);
   const currentOrder = ref(null);
   const selectedParcelId = ref(null);
@@ -26,215 +37,55 @@ export const useOrderStore = defineStore("orders", () => {
   const isConfirmingDelivery = ref(false);
   const isUpdatingFeedback = ref(false);
 
+  // ============================================================================
+  // COMPUTED - FILTERED ORDERS
+  // ============================================================================
 
-  const normalizeOrderData = orderData => {
-  if (!orderData) return orderData;
-
-  // ✅ PRESERVE critical fields yang sering hilang
-  const preservedFields = {
-    expiresAt: orderData.expiresAt,
-    createdAt: orderData.createdAt,
-    paymentStatus: orderData.paymentStatus,
-    orderNumber: orderData.orderNumber,
-    status: orderData.status,
-    statusInfo: orderData.statusInfo,
-    actions: orderData.actions,
+  /**
+   * Filter orders by item status
+   */
+  const filterOrdersByItemStatus = (status) => {
+    return orders.value.filter(order => {
+      if (order.sellers?.some(s => s.items?.some(i => i.status === status))) return true;
+      if (order.parcels?.some(p => p.items?.some(i => i.status === status))) return true;
+      if (order.items?.some(i => i.status === status)) return true;
+      return false;
+    });
   };
-
-  const generateParcelId = (orderNumber, sellerName, index) => {
-    return `${orderNumber}-P${index + 1}`;
-  };
-
-  // ✅ FIX: Jika pending payment, cek jumlah UNIQUE seller ID (bukan nama)
-  if (orderData.paymentStatus === "pending" && orderData.sellers && Array.isArray(orderData.sellers)) {
-    const uniqueSellerKeys = new Set(orderData.sellers.map(s => `${s.storeName}-${s.storeSlug || "no-slug"}`));
-
-    if (uniqueSellerKeys.size === 1) {
-      const seller = orderData.sellers[0];
-      const allItems = orderData.sellers.flatMap(s => s.items);
-
-      return {
-        ...orderData,
-        ...preservedFields, // ✅ RESTORE preserved fields
-        parcels: [
-          {
-            parcelId: "merged-pending",
-            seller: {
-              storeName: seller.storeName,
-              storeLogo: seller.storeLogo,
-              storeSlug: seller.storeSlug,
-            },
-            status: "pending",
-            items: allItems,
-            canTrack: false,
-            canCancel: true,
-            canConfirmDelivery: false,
-            subtotal: orderData.totalAmount || orderData.subtotal,
-          },
-        ],
-        items: allItems,
-      };
-    }
-
-    const allItems = orderData.sellers.flatMap(seller => seller.items);
-
-    return {
-      ...orderData,
-      ...preservedFields, // ✅ RESTORE preserved fields
-      parcels: [
-        {
-          parcelId: "merged-pending",
-          seller: {
-            storeName: "Multiple Sellers",
-            storeLogo: null,
-            storeSlug: null,
-          },
-          status: "pending",
-          items: allItems,
-          canTrack: false,
-          canCancel: true,
-          canConfirmDelivery: false,
-          subtotal: orderData.totalAmount || orderData.subtotal,
-        },
-      ],
-      items: allItems,
-    };
-  }
-
-  // ✅ Jika PAID, split ke parcels per seller (logic tidak berubah)
-  if (orderData.sellers && Array.isArray(orderData.sellers) && !orderData.parcels) {
-    orderData.parcels = orderData.sellers.map((seller, index) => ({
-      parcelId: seller.parcelId || generateParcelId(orderData.orderNumber, seller.storeName, index),
-      seller: {
-        storeName: seller.storeName,
-        storeSlug: seller.storeSlug,
-        storeLogo: seller.storeLogo,
-      },
-      status: determineSellerStatus(seller.items),
-      subtotal: seller.items.reduce((sum, item) => sum + (item.price || item.subtotal || 0) * item.quantity, 0),
-      items: seller.items,
-      canTrack: orderData.actions?.canTrack || false,
-      canCancel: orderData.actions?.canCancel || false,
-      canConfirmDelivery: seller.items.some(item => item.status === "delivered"),
-      timestamps: seller.timestamps || {},
-    }));
-  }
-
-  if (orderData.parcels && Array.isArray(orderData.parcels)) {
-    orderData.parcels = orderData.parcels.map(parcel => ({
-      ...parcel,
-      subtotal: parcel.subtotal || parcel.items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
-    }));
-
-    orderData.items = orderData.parcels.flatMap(parcel =>
-      parcel.items.map(item => ({
-        ...item,
-        seller: parcel.seller,
-        parcelId: parcel.parcelId,
-        parcelStatus: parcel.status,
-      }))
-    );
-  }
-
-  return {
-    ...orderData,
-    ...preservedFields, // ✅ ALWAYS restore preserved fields at the end
-  };
-};
-
-  // Helper function - tambahkan di dalam defineStore
-  const determineSellerStatus = items => {
-    if (!items || items.length === 0) return "pending";
-    const statuses = [...new Set(items.map(item => item.status))];
-    if (statuses.length === 1) return statuses[0];
-
-    // Mixed status priority
-    if (items.every(item => item.status === "received")) return "received";
-    if (items.some(item => item.status === "received")) return "received";
-    if (items.some(item => item.status === "delivered")) return "delivered";
-    if (items.some(item => item.status === "shipped")) return "shipped";
-    if (items.some(item => item.status === "packed")) return "packed";
-    if (items.some(item => item.status === "cancelled")) return "cancelled";
-    return items[0].status || "pending";
-  };
-  // ✅ Filter berdasarkan ITEM.status (bukan order.statusInfo.status)
 
   const pendingOrders = computed(() => {
     return orders.value.filter(order => {
-      // Pending payment orders
       if (order.paymentStatus === "pending") return true;
-
-      // Pending items
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "pending"))) return true;
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "pending"))) return true;
-      if (order.items?.some(i => i.status === "pending")) return true;
-
-      return false;
+      return filterOrdersByItemStatus("pending").includes(order);
     });
   });
 
-  const packedOrders = computed(() => {
-    return orders.value.filter(order => {
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "packed"))) return true;
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "packed"))) return true;
-      if (order.items?.some(i => i.status === "packed")) return true;
-      return false;
-    });
-  });
-
-  const shippedOrders = computed(() => {
-    return orders.value.filter(order => {
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "shipped"))) return true;
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "shipped"))) return true;
-      if (order.items?.some(i => i.status === "shipped")) return true;
-      return false;
-    });
-  });
-
-  const deliveredOrders = computed(() => {
-    return orders.value.filter(order => {
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "delivered"))) return true;
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "delivered"))) return true;
-      if (order.items?.some(i => i.status === "delivered")) return true;
-      return false;
-    });
-  });
-
-  const receivedOrders = computed(() => {
-    return orders.value.filter(order => {
-      // ✅ CRITICAL: Cek di sellers.items (struktur backend)
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "received"))) return true;
-
-      // Cek di parcels.items (setelah normalization)
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "received"))) return true;
-
-      // Cek di items langsung
-      if (order.items?.some(i => i.status === "received")) return true;
-
-      return false;
-    });
-  });
-
-  const cancelledOrders = computed(() => {
-    return orders.value.filter(order => {
-      if (order.sellers?.some(s => s.items?.some(i => i.status === "cancelled"))) return true;
-      if (order.parcels?.some(p => p.items?.some(i => i.status === "cancelled"))) return true;
-      if (order.items?.some(i => i.status === "cancelled")) return true;
-      return false;
-    });
-  });
+  const packedOrders = computed(() => filterOrdersByItemStatus("packed"));
+  const shippedOrders = computed(() => filterOrdersByItemStatus("shipped"));
+  const deliveredOrders = computed(() => filterOrdersByItemStatus("delivered"));
+  const receivedOrders = computed(() => filterOrdersByItemStatus("received"));
+  const cancelledOrders = computed(() => filterOrdersByItemStatus("cancelled"));
 
   const cancellationRequestedOrders = computed(() => {
     return orders.value.filter(order => order.status === "cancellation_requested");
   });
 
-  const paidOrders = computed(() => orders.value.filter(order => order.paymentStatus === "paid"));
+  const paidOrders = computed(() => {
+    return orders.value.filter(order => order.paymentStatus === "paid");
+  });
 
-  const unpaidOrders = computed(() => orders.value.filter(order => order.paymentStatus === "pending"));
+  const unpaidOrders = computed(() => {
+    return orders.value.filter(order => order.paymentStatus === "pending");
+  });
 
-  const refundedOrders = computed(() => orders.value.filter(order => order.paymentStatus === "refunded"));
+  const refundedOrders = computed(() => {
+    return orders.value.filter(order => order.paymentStatus === "refunded");
+  });
+
+  /**
+   * Display order based on selected parcel
+   */
   const displayOrder = computed(() => {
-
     if (!currentOrder.value || !selectedParcelId.value) {
       return currentOrder.value;
     }
@@ -254,15 +105,10 @@ export const useOrderStore = defineStore("orders", () => {
     };
   });
 
-  const setSelectedParcel = parcelId => {
-    selectedParcelId.value = parcelId;
-  };
+  // ============================================================================
+  // COMPUTED - STATISTICS
+  // ============================================================================
 
-  const clearSelectedParcel = () => {
-    selectedParcelId.value = null;
-  };
-
-  // Computed - Statistics
   const orderStats = computed(() => ({
     total: orders.value.length,
     pending: pendingOrders.value.length,
@@ -277,21 +123,82 @@ export const useOrderStore = defineStore("orders", () => {
     refunded: refundedOrders.value.length,
   }));
 
-  // Computed - Actionable orders using backend statusInfo
   const actionableOrders = computed(() => ({
     canPay: orders.value.filter(order => order.statusInfo?.canPay),
     canCancel: orders.value.filter(order => order.statusInfo?.canCancel),
     canConfirm: orders.value.filter(order => order.statusInfo?.canConfirmDelivery),
     canReview: orders.value.filter(order => order.statusInfo?.isCompleted),
-    expired: orders.value.filter(order => orderService.isOrderExpired(order)),
+    expired: orders.value.filter(order => orderUtils.isOrderExpired(order)),
   }));
 
-  // Helper functions
-  const setLoading = state => {
+  const getTotalSpent = computed(() => {
+    return orders.value
+      .filter(order => order.paymentStatus === "paid")
+      .reduce((total, order) => total + (order.totalAmount || 0), 0);
+  });
+
+  const getMonthlySpending = computed(() => {
+    const monthlyData = {};
+
+    orders.value
+      .filter(order => order.paymentStatus === "paid")
+      .forEach(order => {
+        const date = new Date(order.createdAt);
+        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = {
+            month: monthKey,
+            total: 0,
+            count: 0,
+          };
+        }
+
+        monthlyData[monthKey].total += order.totalAmount || 0;
+        monthlyData[monthKey].count += 1;
+      });
+
+    return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+  });
+
+  const getRecentActivity = computed(() => {
+    const recentOrders = [...orders.value]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+
+    return recentOrders.map(order => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.statusInfo?.status || order.status,
+      displayStatus: order.statusInfo?.displayStatus,
+      createdAt: order.createdAt,
+      totalAmount: order.totalAmount,
+      itemCount: order.items?.length || 0,
+    }));
+  });
+
+  const orderCapabilities = computed(() => {
+    if (!currentOrder.value) return {};
+
+    return {
+      canCancel: currentOrder.value.statusInfo?.canCancel || false,
+      canPay: currentOrder.value.statusInfo?.canPay || false,
+      canConfirm: currentOrder.value.statusInfo?.canConfirmDelivery || false,
+      canReview: currentOrder.value.statusInfo?.isCompleted || false,
+      isExpired: orderUtils.isOrderExpired(currentOrder.value),
+      timeUntilExpiry: orderUtils.getTimeUntilExpiry(currentOrder.value),
+    };
+  });
+
+  // ============================================================================
+  // HELPER FUNCTIONS
+  // ============================================================================
+
+  const setLoading = (state) => {
     isLoading.value = state;
   };
 
-  const setError = errorData => {
+  const setError = (errorData) => {
     error.value = errorData;
   };
 
@@ -299,6 +206,9 @@ export const useOrderStore = defineStore("orders", () => {
     error.value = null;
   };
 
+  /**
+   * Handle API response uniformly
+   */
   const handleApiResponse = (response, successCallback = null) => {
     if (response.success) {
       clearError();
@@ -316,8 +226,39 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  // Actions - Order Creation
-  const createOrder = async orderData => {
+  /**
+   * Update order in orders array
+   */
+  const updateOrderInList = (orderId, updateData) => {
+    const orderIndex = orders.value.findIndex(o => o.id === orderId);
+    if (orderIndex !== -1) {
+      orders.value[orderIndex] = normalizeOrderData({
+        ...orders.value[orderIndex],
+        ...updateData,
+      });
+    }
+  };
+
+  /**
+   * Update current order
+   */
+  const updateCurrentOrder = (orderId, updateData) => {
+    if (currentOrder.value?.id === orderId) {
+      currentOrder.value = normalizeOrderData({
+        ...currentOrder.value,
+        ...updateData,
+      });
+    }
+  };
+
+  // ============================================================================
+  // ACTIONS - ORDER CREATION & PAYMENT
+  // ============================================================================
+
+  /**
+   * Create order from cart
+   */
+  const createOrder = async (orderData) => {
     try {
       isCreatingOrder.value = true;
       clearError();
@@ -326,11 +267,9 @@ export const useOrderStore = defineStore("orders", () => {
 
       return handleApiResponse(response, data => {
         if (orders.value.length > 0) {
-          // ✅ FIX: Backend sudah kirim sellers array yang benar, jangan rebuild
           let newOrder = {
             ...data,
             id: data.orderId,
-            // Keep sellers as is from backend response
             sellers: data.sellers || [],
           };
 
@@ -350,7 +289,9 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  // Actions - Payment
+  /**
+   * Pay for order
+   */
   const payOrder = async (orderId, pin) => {
     try {
       isPayingOrder.value = true;
@@ -359,22 +300,15 @@ export const useOrderStore = defineStore("orders", () => {
       const response = await orderService.payOrder(orderId, pin);
 
       return handleApiResponse(response, data => {
-        const orderIndex = orders.value.findIndex(o => o.id === orderId);
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = normalizeOrderData({
-            ...orders.value[orderIndex],
-            ...data.order,
-            paymentStatus: "paid",
-          });
-        }
+        updateOrderInList(orderId, {
+          ...data.order,
+          paymentStatus: "paid",
+        });
 
-        if (currentOrder.value?.id === orderId) {
-          currentOrder.value = normalizeOrderData({
-            ...currentOrder.value,
-            ...data.order,
-            paymentStatus: "paid",
-          });
-        }
+        updateCurrentOrder(orderId, {
+          ...data.order,
+          paymentStatus: "paid",
+        });
       });
     } catch (error) {
       const errorData = {
@@ -388,26 +322,13 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  const validatePayment = async orderId => {
-    try {
-      setLoading(true);
-      clearError();
+  // ============================================================================
+  // ACTIONS - FETCH ORDERS
+  // ============================================================================
 
-      const response = await orderService.validatePayment(orderId);
-      return handleApiResponse(response);
-    } catch (error) {
-      const errorData = {
-        message: error.message || "Payment validation failed",
-        details: error,
-      };
-      setError(errorData);
-      return { success: false, error: errorData };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Actions - Fetch Orders
+  /**
+   * Fetch orders with filtering and pagination
+   */
   const fetchOrders = async (params = {}) => {
     try {
       setLoading(true);
@@ -431,6 +352,10 @@ export const useOrderStore = defineStore("orders", () => {
       setLoading(false);
     }
   };
+
+  /**
+   * Fetch single order by ID
+   */
   const fetchOrderById = async (orderId, keepSelectedParcel = false) => {
     try {
       setLoading(true);
@@ -439,11 +364,11 @@ export const useOrderStore = defineStore("orders", () => {
       const savedParcelId = keepSelectedParcel ? selectedParcelId.value : null;
 
       const response = await orderService.getOrderById(orderId);
+      
       return handleApiResponse(response, data => {
         let normalizedOrder = normalizeOrderData(data);
 
-        // ✅ FIX: Jika pending DAN ada selectedParcelId = 'merged-pending'
-        // Force merge setelah normalize
+        // Force merge for pending orders with selected merged parcel
         if (normalizedOrder.paymentStatus === "pending" && savedParcelId === "merged-pending") {
           const allItems = normalizedOrder.parcels.flatMap(p => p.items);
           normalizedOrder = {
@@ -473,10 +398,7 @@ export const useOrderStore = defineStore("orders", () => {
           selectedParcelId.value = savedParcelId;
         }
 
-        const orderIndex = orders.value.findIndex(o => o.id === orderId);
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = normalizedOrder;
-        }
+        updateOrderInList(orderId, normalizedOrder);
       });
     } catch (error) {
       const errorData = {
@@ -490,6 +412,9 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
+  /**
+   * Fetch order with cache busting
+   */
   const fetchOrderByIdFresh = async (orderId, bustCache = true) => {
     try {
       setLoading(true);
@@ -500,11 +425,7 @@ export const useOrderStore = defineStore("orders", () => {
       return handleApiResponse(response, data => {
         const normalizedOrder = normalizeOrderData(data);
         currentOrder.value = normalizedOrder;
-
-        const orderIndex = orders.value.findIndex(o => o.id === orderId);
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = normalizedOrder;
-        }
+        updateOrderInList(orderId, normalizedOrder);
       });
     } catch (error) {
       const errorData = {
@@ -518,7 +439,13 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  // Actions - Cancel Order
+  // ============================================================================
+  // ACTIONS - ORDER UPDATES
+  // ============================================================================
+
+  /**
+   * Cancel order
+   */
   const cancelOrder = async (orderId, reason, itemsToCancel = []) => {
     try {
       isCancellingOrder.value = true;
@@ -527,24 +454,17 @@ export const useOrderStore = defineStore("orders", () => {
       const response = await orderService.cancelOrder(orderId, reason, itemsToCancel);
 
       return handleApiResponse(response, data => {
-        const orderIndex = orders.value.findIndex(o => o.id === orderId);
-        if (orderIndex !== -1) {
-          orders.value[orderIndex] = normalizeOrderData({
-            ...orders.value[orderIndex],
-            status: data.status,
-            statusInfo: data.statusInfo,
-            cancelRequest: data.cancelRequest,
-          });
-        }
+        updateOrderInList(orderId, {
+          status: data.status,
+          statusInfo: data.statusInfo,
+          cancelRequest: data.cancelRequest,
+        });
 
-        if (currentOrder.value?.id === orderId) {
-          currentOrder.value = normalizeOrderData({
-            ...currentOrder.value,
-            status: data.status,
-            statusInfo: data.statusInfo,
-            cancelRequest: data.cancelRequest,
-          });
-        }
+        updateCurrentOrder(orderId, {
+          status: data.status,
+          statusInfo: data.statusInfo,
+          cancelRequest: data.cancelRequest,
+        });
       });
     } catch (error) {
       const errorData = {
@@ -559,7 +479,7 @@ export const useOrderStore = defineStore("orders", () => {
   };
 
   /**
-   * Confirm items delivery - dynamic (product/parcel/all)
+   * Confirm items delivery
    */
   const confirmItemsDelivery = async (orderId, confirmData = {}) => {
     try {
@@ -569,7 +489,6 @@ export const useOrderStore = defineStore("orders", () => {
       const response = await orderService.confirmItemsDelivery(orderId, confirmData);
 
       return handleApiResponse(response, async () => {
-        // Refresh with keepSelectedParcel = true
         await fetchOrderById(orderId, true);
       });
     } catch (error) {
@@ -584,7 +503,34 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  // Actions - Update Feedback
+  /**
+   * Update product review
+   */
+  const updateProductReview = async (orderId, productId, reviewData) => {
+    try {
+      isUpdatingFeedback.value = true;
+      clearError();
+
+      const response = await orderService.updateProductReview(orderId, productId, reviewData);
+
+      return handleApiResponse(response, async () => {
+        await fetchOrderById(orderId, true);
+      });
+    } catch (error) {
+      const errorData = {
+        message: error.message || "Failed to update review",
+        details: error,
+      };
+      setError(errorData);
+      return { success: false, error: errorData };
+    } finally {
+      isUpdatingFeedback.value = false;
+    }
+  };
+
+  /**
+   * Update order feedback
+   */
   const updateOrderFeedback = async (orderId, feedbackData) => {
     try {
       isUpdatingFeedback.value = true;
@@ -620,7 +566,10 @@ export const useOrderStore = defineStore("orders", () => {
     }
   };
 
-  // Actions - Convenience methods
+  // ============================================================================
+  // ACTIONS - CONVENIENCE METHODS
+  // ============================================================================
+
   const fetchOrdersByStatus = async (status, params = {}) => {
     return fetchOrders({ ...params, status });
   };
@@ -641,7 +590,6 @@ export const useOrderStore = defineStore("orders", () => {
     return fetchOrdersByStatus("cancelled", params);
   };
 
-  // Actions - Utility methods
   const refreshOrders = async () => {
     const currentParams = {
       page: pagination.value.currentPage,
@@ -656,6 +604,10 @@ export const useOrderStore = defineStore("orders", () => {
     }
     return { success: false, error: "No current order to refresh" };
   };
+
+  // ============================================================================
+  // ACTIONS - PAGINATION
+  // ============================================================================
 
   const loadNextPage = async () => {
     if (pagination.value.hasNextPage) {
@@ -680,15 +632,18 @@ export const useOrderStore = defineStore("orders", () => {
     return { success: false, error: "No previous page available" };
   };
 
-  const goToPage = async page => {
+  const goToPage = async (page) => {
     if (page >= 1 && page <= pagination.value.totalPages) {
       return fetchOrders({ page });
     }
     return { success: false, error: "Invalid page number" };
   };
 
-  // Actions - Search (local filtering)
-  const searchOrders = async searchTerm => {
+  // ============================================================================
+  // ACTIONS - SEARCH & FILTERS
+  // ============================================================================
+
+  const searchOrders = async (searchTerm) => {
     const filteredOrders = orders.value.filter(
       order =>
         order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -707,7 +662,22 @@ export const useOrderStore = defineStore("orders", () => {
     };
   };
 
-  // Actions - Reset methods
+  // ============================================================================
+  // ACTIONS - PARCEL SELECTION
+  // ============================================================================
+
+  const setSelectedParcel = (parcelId) => {
+    selectedParcelId.value = parcelId;
+  };
+
+  const clearSelectedParcel = () => {
+    selectedParcelId.value = null;
+  };
+
+  // ============================================================================
+  // ACTIONS - RESET METHODS
+  // ============================================================================
+
   const clearOrders = () => {
     orders.value = [];
     pagination.value = {
@@ -735,16 +705,19 @@ export const useOrderStore = defineStore("orders", () => {
     isUpdatingFeedback.value = false;
   };
 
-  // Getters - Find specific orders
-  const getOrderById = orderId => {
+  // ============================================================================
+  // GETTERS - FIND SPECIFIC ORDERS
+  // ============================================================================
+
+  const getOrderById = (orderId) => {
     return orders.value.find(order => order.id === orderId || order._id === orderId);
   };
 
-  const getOrderByNumber = orderNumber => {
+  const getOrderByNumber = (orderNumber) => {
     return orders.value.find(order => order.orderNumber === orderNumber);
   };
 
-  const getOrdersByProduct = productId => {
+  const getOrdersByProduct = (productId) => {
     return orders.value.filter(order =>
       order.items?.some(item => item.productId === productId || item.product === productId)
     );
@@ -760,112 +733,9 @@ export const useOrderStore = defineStore("orders", () => {
     });
   };
 
-  // Getters - Analysis
-  const getTotalSpent = computed(() => {
-    return orders.value
-      .filter(order => order.paymentStatus === "paid")
-      .reduce((total, order) => total + (order.totalAmount || 0), 0);
-  });
-
-  const getMonthlySpending = computed(() => {
-    const monthlyData = {};
-
-    orders.value
-      .filter(order => order.paymentStatus === "paid")
-      .forEach(order => {
-        const date = new Date(order.createdAt);
-        const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-
-        if (!monthlyData[monthKey]) {
-          monthlyData[monthKey] = {
-            month: monthKey,
-            total: 0,
-            count: 0,
-          };
-        }
-
-        monthlyData[monthKey].total += order.totalAmount || 0;
-        monthlyData[monthKey].count += 1;
-      });
-
-    return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
-  });
-
-  const getRecentActivity = computed(() => {
-    const recentOrders = [...orders.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-
-    return recentOrders.map(order => ({
-      id: order.id,
-      orderNumber: order.orderNumber,
-      status: order.statusInfo?.status || order.status,
-      displayStatus: order.statusInfo?.displayStatus,
-      createdAt: order.createdAt,
-      totalAmount: order.totalAmount,
-      itemCount: order.items?.length || 0,
-    }));
-  });
-
-  // Computed - Order capabilities using backend statusInfo
-  const orderCapabilities = computed(() => {
-    if (!currentOrder.value) return {};
-
-    return {
-      canCancel: currentOrder.value.statusInfo?.canCancel || false,
-      canPay: currentOrder.value.statusInfo?.canPay || false,
-      canConfirm: currentOrder.value.statusInfo?.canConfirmDelivery || false,
-      canReview: currentOrder.value.statusInfo?.isCompleted || false,
-      isExpired: orderService.isOrderExpired(currentOrder.value),
-      timeUntilExpiry: orderService.getTimeUntilExpiry(currentOrder.value),
-    };
-  });
-  // Di orderStore.js - tambahkan action baru
-  const updateProductReview = async (orderId, productId, reviewData) => {
-    try {
-      isUpdatingFeedback.value = true;
-      clearError();
-
-      const response = await orderService.updateProductReview(orderId, productId, reviewData);
-
-      return handleApiResponse(response, async () => {
-        // Refresh order dengan keepSelectedParcel = true
-        await fetchOrderById(orderId, true);
-      });
-    } catch (error) {
-      const errorData = {
-        message: error.message || "Failed to update review",
-        details: error,
-      };
-      setError(errorData);
-      return { success: false, error: errorData };
-    } finally {
-      isUpdatingFeedback.value = false;
-    }
-  };
-
-  // Utility methods using orderService
-  const canCancelOrder = order => orderService.canCancelOrder(order);
-  const canPayOrder = order => orderService.canPayOrder(order);
-  const canConfirmDelivery = order => orderService.canConfirmDelivery(order);
-  const hasDeliverableItems = order => {
-    if (!order) return false;
-
-    // Check in parcels
-    if (order.parcels?.some(p => p.items?.some(i => i.status === "delivered"))) {
-      return true;
-    }
-
-    // Check in items
-    if (order.items?.some(i => i.status === "delivered")) {
-      return true;
-    }
-
-    return false;
-  };
-  const canAddFeedback = order => orderService.canAddFeedback(order);
-  const isOrderExpired = order => orderService.isOrderExpired(order);
-  const getTimeUntilExpiry = order => orderService.getTimeUntilExpiry(order);
-  const formatOrderStatus = statusInfo => orderService.formatOrderStatus(statusInfo);
-  const getOrderStatusColor = statusInfo => orderService.getOrderStatusColor(statusInfo);
+  // ============================================================================
+  // RETURN PUBLIC API
+  // ============================================================================
 
   return {
     // State
@@ -905,17 +775,13 @@ export const useOrderStore = defineStore("orders", () => {
     // Actions - Core
     createOrder,
     payOrder,
-    validatePayment,
     fetchOrders,
     fetchOrderById,
     fetchOrderByIdFresh,
     cancelOrder,
     confirmItemsDelivery,
-    hasDeliverableItems,
-    updateOrderFeedback,
-    setSelectedParcel,
-    clearSelectedParcel,
     updateProductReview,
+    updateOrderFeedback,
 
     // Actions - Convenience
     fetchOrdersByStatus,
@@ -934,6 +800,10 @@ export const useOrderStore = defineStore("orders", () => {
     // Actions - Search
     searchOrders,
 
+    // Actions - Parcel
+    setSelectedParcel,
+    clearSelectedParcel,
+
     // Actions - Reset
     clearOrders,
     clearCurrentOrder,
@@ -946,14 +816,7 @@ export const useOrderStore = defineStore("orders", () => {
     getOrdersByProduct,
     getOrdersByDateRange,
 
-    // Utility
-    canCancelOrder,
-    canPayOrder,
-    canConfirmDelivery,
-    canAddFeedback,
-    isOrderExpired,
-    getTimeUntilExpiry,
-    formatOrderStatus,
-    getOrderStatusColor,
+    // Utility (delegated to composable)
+    ...orderUtils,
   };
 });

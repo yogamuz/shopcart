@@ -72,9 +72,9 @@
             <!-- Empty State -->
             <div v-else-if="userAddresses.length === 0" class="text-center py-8">
               <p class="text-gray-500 mb-3">No addresses found</p>
-              <button 
-                type="button" 
-                @click="openAddAddressModal" 
+              <button
+                type="button"
+                @click="openAddAddressModal"
                 class="text-blue-600 hover:underline text-sm font-medium"
               >
                 Add your first address
@@ -397,59 +397,31 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { storeToRefs } from "pinia"; // ✅ TAMBAHKAN INI
 import { useAuthStore } from "@/stores/authStore";
-import { useUserProfile } from "@/composables/useUserProfile";
+import { useUserProfileStore } from "@/stores/userProfileStore"; // ✅ GANTI DARI useUserProfile
 
 const props = defineProps({
-  cartItems: {
-    type: Array,
-    required: true,
-  },
-  subtotal: {
-    type: Number,
-    required: true,
-  },
-  discountAmount: {
-    type: Number,
-    default: 0,
-  },
-  appliedCoupon: {
-    type: Object,
-    default: null,
-  },
-  shippingCost: {
-    type: Number,
-    default: 0,
-  },
-  tax: {
-    type: Number,
-    default: 0,
-  },
-  total: {
-    type: Number,
-    required: true,
-  },
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
+  cartItems: { type: Array, required: true },
+  subtotal: { type: Number, required: true },
+  discountAmount: { type: Number, default: 0 },
+  appliedCoupon: { type: Object, default: null },
+  shippingCost: { type: Number, default: 0 },
+  tax: { type: Number, default: 0 },
+  total: { type: Number, required: true },
+  isLoading: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["create-order", "address-selected"]);
 
+// ✅ GANTI: Use store directly instead of composable
 const authStore = useAuthStore();
+const profileStore = useUserProfileStore();
 
-const {
-  addresses,
-  defaultAddress,
-  loading: profileLoading,
-  initialize: initializeProfile,
-  formatAddress,
-  addAddress,
-} = useUserProfile();
+// ✅ GANTI: Get reactive refs from store
+const { addresses, defaultAddress, loading: profileLoading } = storeToRefs(profileStore);
 
 // Form data
 const selectedAddressId = ref(null);
@@ -498,13 +470,9 @@ const jabodetabekCities = ref([
   { name: "Ciputat", province: "Banten" },
 ]);
 
-// ✅ KODE BARU (ganti dengan ini)
+// ✅ SIMPLIFIED: userAddresses computed
 const userAddresses = computed(() => {
-  // addresses sudah berupa ref dari storeToRefs, tidak perlu .value di dalam computed
-  const addressList = addresses.value;
-  
-  
-  return Array.isArray(addressList) ? addressList : [];
+  return Array.isArray(addresses.value) ? addresses.value : [];
 });
 
 // Computed
@@ -522,7 +490,7 @@ const isNewAddressFormValid = computed(() => {
 });
 
 // Methods
-const formatCurrency = (amount) => {
+const formatCurrency = amount => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -530,7 +498,6 @@ const formatCurrency = (amount) => {
     maximumFractionDigits: 0,
   }).format(amount);
 };
-
 
 const getItemKey = item => {
   return item.productId || item.product?.id || item._id || item.id;
@@ -606,9 +573,7 @@ const onCityInput = () => {
     return;
   }
 
-  filteredCities.value = jabodetabekCities.value
-    .filter(city => city.name.toLowerCase().includes(query))
-    .slice(0, 8);
+  filteredCities.value = jabodetabekCities.value.filter(city => city.name.toLowerCase().includes(query)).slice(0, 8);
 
   showCitySuggestions.value = filteredCities.value.length > 0;
 };
@@ -626,15 +591,16 @@ const hideCitySuggestions = () => {
   }, 150);
 };
 
+// ✅ GANTI: Use store method directly
 const handleSaveNewAddress = async () => {
   if (!isNewAddressFormValid.value) return;
 
   try {
-    await addAddress(newAddressForm.value);
-    
+    await profileStore.addAddress(newAddressForm.value);
+
     const newIndex = userAddresses.value.length - 1;
     selectedAddressId.value = newIndex;
-    
+
     closeAddressModal();
   } catch (error) {
     console.error("Failed to add address:", error);
@@ -642,13 +608,10 @@ const handleSaveNewAddress = async () => {
   }
 };
 
-// Load user addresses on mount
-// ✅ TAMBAHKAN setelah initializeProfile()
+// ✅ GANTI: Use store initialize method
 onMounted(async () => {
   try {
-    await initializeProfile();
-    
-    // ✅ TAMBAHKAN DEBUG LOG INI
+    await profileStore.initialize();
 
     if (defaultAddress.value) {
       const defaultIndex = userAddresses.value.findIndex(addr => addr.isDefault);
@@ -663,7 +626,6 @@ onMounted(async () => {
   }
 });
 </script>
-
 <style scoped>
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out forwards;

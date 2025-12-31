@@ -1,4 +1,4 @@
-<!-- src/components/CategorySelector.vue - FIXED VERSION -->
+<!-- src/components/CategorySelector.vue -->
 <template>
   <div>
     <!-- Loading State -->

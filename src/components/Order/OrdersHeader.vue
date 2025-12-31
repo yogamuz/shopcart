@@ -103,7 +103,6 @@ const updateIndicatorPosition = activeIndex => {
   };
 };
 
-// ✅ FIXED: Count items from 'sellers' array (backend structure)
 const itemLevelStats = computed(() => {
   const stats = {
     total: 0,
@@ -116,22 +115,20 @@ const itemLevelStats = computed(() => {
   };
 
   props.orders.forEach(order => {
-    // Backend returns 'sellers' array
-    const sellersArray = order.sellers || order.parcels || [];
+    // ✅ Use parcels (already normalized by store)
+    if (!order.parcels || !Array.isArray(order.parcels)) return;
     
-    if (Array.isArray(sellersArray)) {
-      sellersArray.forEach(seller => {
-        if (seller.items && Array.isArray(seller.items)) {
-          seller.items.forEach(item => {
-            stats.total++;
-            const status = item.status;
-            if (stats.hasOwnProperty(status)) {
-              stats[status]++;
-            }
-          });
+    order.parcels.forEach(parcel => {
+      if (!parcel.items || !Array.isArray(parcel.items)) return;
+      
+      parcel.items.forEach(item => {
+        stats.total++;
+        const status = item.status;
+        if (stats.hasOwnProperty(status)) {
+          stats[status]++;
         }
       });
-    }
+    });
   });
 
   return stats;
