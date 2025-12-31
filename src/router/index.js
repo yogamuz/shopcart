@@ -4,10 +4,8 @@ import { setupRouterGuards } from "@/utils/routerGuards";
 
 // Import Layouts
 import DefaultLayout from "@/layouts/DefaultLayout.vue";
-// import DashboardLayout from "@/layouts/DashboardLayout.vue";
-// import SellerLayout from "@/layouts/SellerLayout.vue";
-// import AdminLayout from "@/layouts/AdminLayout.vue";
 import StandaloneLayout from "@/layouts/StandaloneLayout.vue";
+import SellerLayout from "@/layouts/SellerLayout.vue";
 
 const routes = [
   // ========================================
@@ -47,17 +45,10 @@ const routes = [
         component: () => import("@/views/ProductDetail.vue"),
         props: route => ({
           productId: route.params.productId,
-          slug: route.params.productId, // Keep slug for backward compatibility
+          slug: route.params.productId,
         }),
         meta: { title: "Product Details" },
       },
-      // {
-      //   path: "products/:slug",
-      //   name: "ProductDetail",
-      //   component: () => import("@/views/ProductDetail.vue"),
-      //   props: true,
-      //   meta: { title: "Product Details" },
-      // },
     ],
   },
 
@@ -114,85 +105,64 @@ const routes = [
   },
 
   // ========================================
-  // DASHBOARD LAYOUT (User)
+  // ✅ SELLER LAYOUT (Proper SPA Structure)
   // ========================================
-  // {
-  //   path: "/dashboard",
-  //   component: DashboardLayout,
-  //   meta: {
-  //     requiresAuth: true,
-  //     role: "user",
-  //   },
-  //   children: [
-  //     {
-  //       path: "",
-  //       name: "UserDashboard",
-  //       component: () => import("@/views/UserDashboard.vue"),
-  //       meta: { title: "My Dashboard" },
-  //     },
-  //     // Add more user dashboard routes here
-  //     // {
-  //     //   path: "profile",
-  //     //   name: "UserProfile",
-  //     //   component: () => import("@/views/dashboard/Profile.vue"),
-  //     // },
-  //   ],
-  // },
+  {
+    path: "/seller",
+    component: SellerLayout,
+    redirect: "/seller/dashboard",
+    meta: {
+      requiresAuth: true,
+      role: "seller",
+    },
+    children: [
+      {
+        path: "dashboard",
+        name: "SellerDashboard",
+        component: () => import("@/views/seller/Dashboard.vue"),
+        meta: { title: "Dashboard Overview" },
+      },
+      {
+        path: "products",
+        name: "SellerProducts",
+        component: () => import("@/views/seller/Products.vue"),
+        meta: { title: "Product Management" },
+      },
+      {
+        path: "orders",
+        name: "SellerOrders",
+        component: () => import("@/views/seller/Orders.vue"),
+        meta: { title: "Orders Dashboard" },
+      },
+      {
+        path: "analytics",
+        name: "SellerAnalytics",
+        component: () => import("@/views/seller/Analytics.vue"),
+        meta: { title: "Analytics & Reports" },
+      },
+      {
+        path: "wallet",
+        name: "SellerWallet",
+        component: () => import("@/views/seller/Wallet.vue"),
+        meta: { title: "Seller Wallet" },
+      },
+      {
+        path: "profile",
+        name: "SellerProfile",
+        component: () => import("@/views/seller/Profile.vue"),
+        meta: { title: "Seller Profile" },
+      },
+      {
+        path: "settings",
+        name: "SellerSettings",
+        component: () => import("@/views/seller/Settings.vue"),
+        meta: { title: "Settings" },
+      },
+    ],
+  },
 
   // ========================================
-  // SELLER LAYOUT
-  // ========================================
-  // {
-  //   path: "/seller",
-  //   component: SellerLayout,
-  //   meta: {
-  //     requiresAuth: true,
-  //     role: "seller",
-  //   },
-  //   children: [
-  //     {
-  //       path: "dashboard",
-  //       name: "SellerDashboard",
-  //       component: () => import("@/views/SellerDashboard.vue"),
-  //       meta: { title: "Seller Dashboard" },
-  //     },
-  //     // Add more seller routes here
-  //     // {
-  //     //   path: "products",
-  //     //   name: "SellerProducts",
-  //     //   component: () => import("@/views/seller/Products.vue"),
-  //     // },
-  //   ],
-  // },
-
-  // ========================================
-  // ADMIN LAYOUT
-  // ========================================
-  // {
-  //   path: "/admin",
-  //   component: AdminLayout,
-  //   meta: {
-  //     requiresAuth: true,
-  //     role: "admin",
-  //   },
-  //   children: [
-  //     {
-  //       path: "dashboard",
-  //       name: "AdminDashboard",
-  //       component: () => import("@/views/AdminDashboard.vue"),
-  //       meta: { title: "Admin Dashboard" },
-  //     },
-  //     // Add more admin routes here
-  //     // {
-  //     //   path: "users",
-  //     //   name: "AdminUsers",
-  //     //   component: () => import("@/views/admin/Users.vue"),
-  //     // },
-  //   ],
-  // },
-
-  // ========================================
-  // 404 NOT FOUND (No Layout)
+  // 404 NOT FOUND
   // ========================================
   {
     path: "/:pathMatch(.*)*",

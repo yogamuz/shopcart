@@ -1,4 +1,3 @@
-<!-- sellerdashboardoverview -->
 <template>
   <div class="dashboard-overview space-y-6">
     <!-- Stats Cards Grid -->
@@ -39,10 +38,11 @@
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { useSellerProduct } from "@/composables/useSellerProduct";
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
+import { storeToRefs } from "pinia"; // ✅ IMPORT INI
+import { useSellerProductStore } from "@/stores/sellerProductStore";
 import StatCard from "./StatCard.vue";
 import ChartCard from "./ChartCard.vue";
 import RevenueChart from "./RevenueChart.vue";
@@ -50,7 +50,16 @@ import OrdersChart from "./OrdersChart.vue";
 import ProductPerformanceCard from "./ProductPerformanceCard.vue";
 import { TrendingUp, ShoppingCart, Package, DollarSign } from "lucide-vue-next";
 
-const { dashboardStats, isLoading, error, fetchDashboardStats } = useSellerProduct({ autoFetch: false });
+const route = useRoute();
+
+// ✅ FIX: Get store instance
+const productStore = useSellerProductStore();
+
+// ✅ FIX: Use storeToRefs for reactive state
+const { dashboardStats, isLoading, error } = storeToRefs(productStore);
+
+// ✅ FIX: Get action directly from store
+const { fetchDashboardStats } = productStore;
 
 const selectedPeriod = ref("30d");
 const dashboardData = computed(() => dashboardStats.value);
@@ -60,8 +69,8 @@ const categoryDistribution = computed(() => {
 
   const categoryMap = new Map();
 
-  dashboardData.value.topProducts.forEach(product => {
-    const categoryName = product.category || 'Uncategorized'; // ✅ Langsung string
+  dashboardData.value.topProducts.forEach((product) => {
+    const categoryName = product.category || "Uncategorized";
 
     if (categoryMap.has(categoryName)) {
       const existing = categoryMap.get(categoryName);
@@ -124,7 +133,7 @@ const statsCards = computed(() => {
   ];
 });
 
-const formatCurrency = value => {
+const formatCurrency = (value) => {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -132,13 +141,40 @@ const formatCurrency = value => {
   }).format(value);
 };
 
-
-const handlePeriodChange = async period => {
-  selectedPeriod.value = period;
-  await fetchDashboardStats();
+const loadDashboardData = async (period = "30d") => {
+  try {
+    console.log("📊 Loading dashboard data...");
+    await fetchDashboardStats(period);
+    console.log("✅ Dashboard data loaded:", dashboardStats.value);
+  } catch (err) {
+    console.error("❌ Failed to load dashboard data:", err);
+  }
 };
 
+const handlePeriodChange = async (period) => {
+  selectedPeriod.value = period;
+  await loadDashboardData(period);
+};
+
+// ✅ WATCH: Re-fetch on route change (handles hot reload)
+watch(
+  () => route.path,
+  (newPath) => {
+    if (newPath === '/seller/dashboard' && !dashboardData.value) {
+      console.log("🔄 Hot reload detected, re-fetching dashboard data");
+      loadDashboardData(selectedPeriod.value);
+    }
+  },
+  { immediate: true }
+);
+
+// ✅ FIX: Always fetch on mount with console log
 onMounted(async () => {
-  await fetchDashboardStats();
+  console.log("🎬 Dashboard mounted, fetching data...");
+  if (!dashboardData.value) {
+    await loadDashboardData(selectedPeriod.value);
+  } else {
+    console.log("✅ Dashboard data already exists:", dashboardData.value);
+  }
 });
 </script>

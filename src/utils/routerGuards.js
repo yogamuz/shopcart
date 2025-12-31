@@ -18,6 +18,12 @@ export const setupRouterGuards = router => {
   router.beforeEach(async (to, from, next) => {
     const authStore = useAuthStore();
 
+    // ✅ CRITICAL: Wait for auth initialization FIRST
+    if (!authStore.isInitialized) {
+      console.log("🔄 Waiting for auth initialization...");
+      await authStore.initialize();
+    }
+
     // Check route meta properties
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
     const isGuestRoute = to.matched.some(record => record.meta.guest);
@@ -34,66 +40,19 @@ export const setupRouterGuards = router => {
 
     // Handle routes that require authentication
     if (requiresAuth) {
+      // ✅ Check AFTER initialization
       if (!authStore.isAuthenticated) {
+        console.warn("❌ Not authenticated, redirecting to login");
         return next({
           path: "/login",
           query: to.path !== "/" ? { redirect: to.fullPath } : {},
         });
       }
 
-      // ✅ FIXED: Wait for auth initialization to complete before role check
-      if (authStore.isInitializing) {
-        await new Promise(resolve => {
-          const checkInterval = setInterval(() => {
-            if (!authStore.isInitializing) {
-              clearInterval(checkInterval);
-              resolve();
-            }
-          }, 50);
-          
-          // Timeout after 3 seconds
-          setTimeout(() => {
-            clearInterval(checkInterval);
-            resolve();
-          }, 3000);
-        });
-      }
-
-      // ✅ FIXED: Add extra delay for mobile to ensure token propagation
-      const isMobile = window.innerWidth <= 768;
-      if (isMobile && authStore.user?.accessToken) {
-        await new Promise(resolve => setTimeout(resolve, 150));
-      }
-
-      // ✅ Auto-fetch seller profile when entering seller dashboard
-      if (authStore.isSeller && to.path.startsWith("/seller")) {
-        try {
-          const sellerProfileStore = useSellerProfileStore();
-
-          // Fetch profile if not already loaded or cache is stale
-          if (!sellerProfileStore.profile || sellerProfileStore.error) {
-            await sellerProfileStore.fetchProfile();
-          }
-        } catch (err) {
-          console.warn("Failed to fetch seller profile:", err);
-          // Don't block navigation - let component handle missing profile
-        }
-      }
-
-      // ✅ FIXED: Better role checking with retry logic
+      // ✅ Check role
       if (requiredRole) {
-        const maxRetries = 3;
-        let currentRole = authStore.userRole;
-        let retryCount = 0;
+        const currentRole = authStore.userRole;
 
-        // Retry if role is still null (token might not be fully propagated)
-        while (!currentRole && retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          currentRole = authStore.userRole;
-          retryCount++;
-        }
-
-        // ✅ FIXED: Only block if we're sure role mismatch after retries
         if (requiredRole === "seller" && currentRole !== "seller") {
           console.warn("⛔ Access denied: Seller role required but user has:", currentRole);
           return next("/");
@@ -103,9 +62,17 @@ export const setupRouterGuards = router => {
           console.warn("⛔ Access denied: Admin role required but user has:", currentRole);
           return next("/");
         }
+      }
 
-        if (requiredRole === "user" && !authStore.isAuthenticated) {
-          return next("/login");
+      // ✅ Auto-fetch seller profile when entering seller routes
+      if (authStore.isSeller && to.path.startsWith("/seller")) {
+        try {
+          const sellerProfileStore = useSellerProfileStore();
+          if (!sellerProfileStore.profile) {
+            await sellerProfileStore.fetchProfile();
+          }
+        } catch (err) {
+          console.warn("Failed to fetch seller profile:", err);
         }
       }
     }
@@ -113,11 +80,10 @@ export const setupRouterGuards = router => {
     next();
   });
 
-  // ✅ Clear seller profile on navigation away from seller routes
+  // ✅ Clear seller profile on logout
   router.afterEach((to, from) => {
     const authStore = useAuthStore();
 
-    // If leaving seller dashboard and not a seller anymore (e.g., after logout)
     if (from.path?.startsWith("/seller") && !to.path.startsWith("/seller") && !authStore.isSeller) {
       try {
         const sellerProfileStore = useSellerProfileStore();

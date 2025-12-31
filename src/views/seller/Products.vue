@@ -128,29 +128,30 @@
 
 <script setup>
 import { ref, onMounted, reactive } from "vue";
-import ProductsGrid from "./SellerProductsGrid.vue";
-import CreateProductModal from "./CreateProductModal.vue";
-import { useSellerProduct } from "@/composables/useSellerProduct";
-import SuccessModal from "./SuccessModal.vue";
-import BulkDeleteModal from "./BulkDeleteModal.vue";
+import { storeToRefs } from "pinia"; // ✅ IMPORT INI
+import ProductsGrid from "../../components/Seller/Product/SellerProductsGrid.vue";
+import CreateProductModal from "../../components/Seller/Product/CreateProductModal.vue";
+import { useSellerProductStore } from "@/stores/sellerProductStore";
+import SuccessModal from "../../components/Seller/Product/SuccessModal.vue";
+import BulkDeleteModal from "../../components/Seller/Product/BulkDeleteModal.vue";
 
-// Menggunakan composable untuk mengelola products
+// ✅ FIX: Get store instance
+const productStore = useSellerProductStore();
+
+// ✅ FIX: Use storeToRefs for reactive state
+const { products, categories, isLoading, error } = storeToRefs(productStore);
+
+// ✅ FIX: Get actions directly from store (no need storeToRefs for functions)
 const {
-  products,
-  categories,
-  isLoading,
-  error,
   fetchProducts,
   createProduct,
   updateProduct,
   deleteProduct,
   uploadProductImage,
   toggleProductStatus,
-  bulkToggleStatus: composableBulkToggleStatus, // Rename untuk avoid conflict
-  bulkDeleteProducts: composableBulkDeleteProducts, // Rename untuk avoid conflict
-} = useSellerProduct({
-  autoFetch: false,
-});
+  bulkToggleStatus,
+  bulkDeleteProducts,
+} = productStore;
 
 // Form state
 const showCreateForm = ref(false);
@@ -160,20 +161,15 @@ const selectedCategory = ref("");
 const createFormRef = ref(null);
 const showBulkDeleteModal = ref(false);
 const bulkDeleteProductIds = ref([]);
-// Tambahkan reactive state setelah const bulkDeleteProductIds = ref([]);
+
 const successModal = reactive({
   title: "Product Created Successfully!",
-  description: "Your new product has been added to the inventory and is now available for customers."
+  description: "Your new product has been added to the inventory and is now available for customers.",
 });
 
-const handleSubmitProduct = async (productData) => {
+const handleSubmitProduct = async productData => {
   try {
-    // Validasi di level component
-    if (
-      !productData.title ||
-      !productData.description ||
-      !productData.category
-    ) {
+    if (!productData.title || !productData.description || !productData.category) {
       alert("Semua field wajib diisi");
       return;
     }
@@ -188,13 +184,11 @@ const handleSubmitProduct = async (productData) => {
       return;
     }
 
-    // Call composable method
     const newProduct = await createProduct(productData);
 
     if (newProduct && newProduct.id) {
-      // Force re-render jika diperlukan
       setTimeout(() => {
-        if (!products.value.find((p) => p.id === newProduct.id)) {
+        if (!products.value.find(p => p.id === newProduct.id)) {
           console.warn("Product not found in list, refetching...");
           fetchProducts();
         }
@@ -203,21 +197,15 @@ const handleSubmitProduct = async (productData) => {
       console.error("Product creation returned invalid data:", newProduct);
     }
 
-    // Close modal dan reset form
     closeCreateForm();
 
-    // Reset success modal ke pesan create product sebelum show
     successModal.title = "Product Created Successfully!";
     successModal.description = "Your new product has been added to the inventory and is now available for customers.";
 
-    // Show success modal instead of alert
     showSuccessModal.value = true;
 
-    // Optional: Force refresh products untuk memastikan consistency
     setTimeout(() => {
-      const productExists = products.value.find(
-        (p) => p.title === productData.title && p.id === newProduct.id
-      );
+      const productExists = products.value.find(p => p.title === productData.title && p.id === newProduct.id);
 
       if (!productExists) {
         console.warn("Product not found in local state, refetching...");
@@ -227,99 +215,76 @@ const handleSubmitProduct = async (productData) => {
   } catch (err) {
     console.error("Error in handleSubmitProduct:", err);
 
-    // Show specific error message
-    const errorMessage =
-      err.message || "Gagal membuat product. Silakan coba lagi.";
+    const errorMessage = err.message || "Gagal membuat product. Silakan coba lagi.";
     alert(errorMessage);
-
-    // Jangan close modal jika ada error, biarkan user memperbaiki input
   }
 };
 
 const closeCreateForm = () => {
   showCreateForm.value = false;
 
-  // Reset form immediately dan tunggu modal benar-benar tertutup
   setTimeout(() => {
     if (createFormRef.value?.resetFormCompletely) {
       createFormRef.value.resetFormCompletely();
     }
 
-    // Clear any lingering errors
     if (error.value) {
       error.value = null;
     }
-  }, 100); // Reduced timeout
+  }, 100);
 };
 
-const resetCreateForm = () => {
-  // Only try to reset if the ref exists and has the resetForm method
-  if (createFormRef.value?.resetForm) {
-    createFormRef.value.resetForm();
-  }
-};
-
-// Handle search dari ProductsHeader - FIXED: Sinkronisasi state
 const handleSearch = async (searchQuery, category = null) => {
   const params = {};
-  
-  // Handle search query
+
   if (searchQuery) {
     params.search = searchQuery;
   }
-  
-  // Handle category - FIXED: Explicit category handling dan state sync
+
   if (category !== null && category !== undefined) {
-    // Jika category explicitly passed, gunakan dan sync ke local state
     if (category !== "") {
       params.category = category;
     }
-    // PENTING: Update selectedCategory local state untuk sinkronisasi UI
     selectedCategory.value = category;
   } else if (selectedCategory.value && selectedCategory.value !== "") {
-    // Jika tidak ada category passed tapi selectedCategory ada value
     params.category = selectedCategory.value;
   }
-  
-  console.log('Search params:', params, 'selectedCategory:', selectedCategory.value); // Debug log
+
+  console.log("Search params:", params, "selectedCategory:", selectedCategory.value);
   await fetchProducts(params);
 };
 
 const editProduct = async (productId, updateData) => {
   try {
     await updateProduct(productId, updateData);
-    // Sukses - data sudah terupdate di local state via composable
   } catch (err) {
     console.error("Error updating product:", err);
     alert("Gagal memperbarui product. Silakan coba lagi.");
   }
 };
+
 const handleBulkToggleStatus = async (productIds, isActive) => {
   try {
-    await composableBulkToggleStatus(productIds, isActive); // Panggil dari composable
-    // Success handling sudah dilakukan di ProductsGrid
+    await bulkToggleStatus(productIds, isActive);
   } catch (err) {
     console.error("Error bulk toggling status:", err);
     alert("Gagal mengubah status produk secara bulk.");
   }
 };
 
-const handleBulkDeleteProducts = async (productIds) => {
-  // Set data untuk modal confirmation
+const handleBulkDeleteProducts = async productIds => {
   bulkDeleteProductIds.value = productIds;
   showBulkDeleteModal.value = true;
 };
-// Ganti function confirmBulkDelete dengan ini:
+
 const confirmBulkDelete = async () => {
   try {
     const productCount = bulkDeleteProductIds.value.length;
-    await composableBulkDeleteProducts(bulkDeleteProductIds.value);
+    await bulkDeleteProducts(bulkDeleteProductIds.value);
 
-    // Set pesan khusus untuk bulk delete
     successModal.title = "Products Deleted Successfully!";
-    successModal.description = `Successfully deleted ${productCount} product${productCount > 1 ? 's' : ''} from your inventory.`;
+    successModal.description = `Successfully deleted ${productCount} product${productCount > 1 ? "s" : ""} from your inventory.`;
 
-    // Show success modal setelah berhasil delete
     setTimeout(() => {
       showSuccessModal.value = true;
     }, 300);
@@ -336,8 +301,10 @@ const closeBulkDeleteModal = () => {
   bulkDeleteProductIds.value = [];
 };
 
-// Load products saat komponen dimount
+// ✅ FIX: Always fetch on mount
 onMounted(async () => {
+  console.log("🎬 Products page mounted, fetching products...");
   await fetchProducts();
+  console.log("✅ Products fetched:", products.value.length);
 });
 </script>

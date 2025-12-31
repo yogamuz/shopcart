@@ -21,28 +21,6 @@
 
       <!-- Right Section - Desktop Design Preserved -->
       <div class="flex items-center space-x-4">
-        <!-- Search Bar -->
-        <div class="relative hidden md:block">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              ></path>
-            </svg>
-          </div>
-          <OrderSearch
-            v-if="showSearch"
-            v-model="searchQuery"
-            :placeholder="searchPlaceholder"
-            @search="handleSearch"
-            @clear="handleClearSearch"
-            class="w-80"
-          />
-        </div>
-
         <!-- Mobile Search Button -->
         <button class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
           <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -80,21 +58,23 @@
         <div class="relative">
           <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
             <!-- Avatar with Logo or Initials -->
-            <div v-if="userLogo" class="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
-              <img :src="userLogo" :alt="userName" class="w-full h-full object-cover" />
+            <div
+              v-if="displayUserLogo"
+              class="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0"
+            >
+              <img :src="displayUserLogo" :alt="displayUserName" class="w-full h-full object-cover" />
             </div>
             <div v-else class="w-8 h-8 bg-[#6C5CE7] rounded-full flex items-center justify-center flex-shrink-0">
-              <span class="text-white font-medium text-sm">{{ getInitials(userName) }}</span>
+              <span class="text-white font-medium text-sm">{{ getInitials(displayUserName) }}</span>
             </div>
 
             <!-- User Info -->
             <div class="hidden md:block text-left">
               <div class="text-sm font-medium text-gray-900">
-                {{ userName }}
+                {{ displayUserName }}
               </div>
               <div class="text-xs text-gray-500">Seller</div>
             </div>
-
           </button>
         </div>
       </div>
@@ -124,21 +104,54 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import OrderSearch from "./OrderSearch.vue";
+import { ref, computed, onMounted } from "vue";
+import { useSellerProfile } from "@/composables/useSellerProfile";
+import { useAuthStore } from "@/stores/authStore"; // ✅ TAMBAH
 
-defineProps({
+const props = defineProps({
   title: { type: String, default: "Dashboard" },
   searchPlaceholder: { type: String, default: "Search..." },
   notificationCount: { type: Number, default: 0 },
   userName: { type: String, default: "User" },
-  userLogo: { type: String, default: null }, // ✨ TAMBAHKAN INI
+  userLogo: { type: String, default: null },
   showSearch: { type: Boolean, default: true },
 });
 
 const searchQuery = ref("");
-
 const emit = defineEmits(["toggle-sidebar", "search", "search-clear"]);
+
+// ✅ Tambah auth store check
+const authStore = useAuthStore();
+const { storeName, profileLogo, fetchProfile } = useSellerProfile();
+
+// ✅ PERBAIKAN: Hanya fetch jika user adalah seller
+onMounted(async () => {
+  // Skip if not authenticated or not seller
+  if (!authStore.isAuthenticated || !authStore.isSeller) {
+    return;
+  }
+
+  try {
+    await fetchProfile();
+  } catch (error) {
+    console.error("Failed to fetch seller profile:", error);
+  }
+});
+
+// Rest of code stays the same...
+const displayUserName = computed(() => {
+  if (storeName.value && storeName.value.trim()) {
+    return storeName.value;
+  }
+  return props.userName || "User";
+});
+
+const displayUserLogo = computed(() => {
+  if (profileLogo.value) {
+    return profileLogo.value;
+  }
+  return props.userLogo || null;
+});
 
 const getInitials = name => {
   return name

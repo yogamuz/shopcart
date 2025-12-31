@@ -1,4 +1,3 @@
-// TAMBAHKAN constants di awal file categoryStore.js setelah import:
 import { defineStore } from "pinia";
 import { productService } from "@/services/productService";
 

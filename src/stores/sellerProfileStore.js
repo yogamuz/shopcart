@@ -85,18 +85,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     error.value = null;
   };
 
-  const validateTokenReady = async () => {
-    const authStore = useAuthStore();
-
-    // ✅ FIX: Use new helper
-    const isReady = await authStore.ensureTokenReady();
-
-    if (!isReady) {
-      return false;
-    }
-
-    return true;
-  };
   const fetchProfile = async (force = false) => {
     const authStore = useAuthStore();
     const currentUserId = authStore.user?._id || authStore.user?.id;
@@ -106,11 +94,7 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       return null;
     }
 
-    // ✅ CRITICAL: Validate token is ready
-    const tokenReady = await validateTokenReady();
-    if (!tokenReady) {
-      return null;
-    }
+    // ✅ HAPUS validateTokenReady - tidak perlu karena sudah ada di router guard
 
     // Check if already loaded
     if (!force && profile.value && lastFetchedUserId.value === currentUserId) {
@@ -122,7 +106,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       clearProfile();
     }
 
-    // ✅ PERBAIKAN: Generate unique request ID
     const requestId = `${currentUserId}-${Date.now()}`;
     activeRequestId.value = requestId;
 
@@ -131,8 +114,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       clearError();
 
       const response = await sellerProfileService.getProfile();
-
-
 
       if (activeRequestId.value !== requestId) {
         return null;
@@ -143,13 +124,8 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
         return null;
       }
 
-      // ✅ CRITICAL: Validate response userId matches
       if (response.success && response.data) {
-
-
         const responseUserId = response.data.userId || response.data.owner?.id;
-
-
 
         if (responseUserId !== currentUserId) {
           console.error("❌ Profile userId mismatch!");
@@ -167,7 +143,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
     } catch (err) {
       console.error("❌ Fetch error:", err);
 
-      // Check if request is still active
       if (activeRequestId.value !== requestId) {
         return null;
       }
@@ -180,7 +155,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
 
       return null;
     } finally {
-      // Only clear loading if this request is still active
       if (activeRequestId.value === requestId) {
         isLoading.value = false;
       }
@@ -335,7 +309,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       uploadProgress.value = 0;
       clearError();
 
-
       const response = await sellerProfileService.uploadLogo(file, progressEvent => {
         // ✅ Only update progress if still same user
         const stillCurrentUser = authStore.user?._id || authStore.user?.id;
@@ -406,7 +379,6 @@ export const useSellerProfileStore = defineStore("sellerProfile", () => {
       isUploadingBanner.value = true;
       uploadProgress.value = 0;
       clearError();
-
 
       const response = await sellerProfileService.uploadBanner(file, progressEvent => {
         // ✅ Only update progress if still same user

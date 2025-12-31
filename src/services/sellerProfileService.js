@@ -1,80 +1,44 @@
 // services/sellerProfileService.js
 import { useApiClient } from "@/composables/useApiClient";
 
-class SellerProfileService {
-  constructor() {
-    this.baseUrl = "/api/seller/profile";
-  }
+const apiClient = useApiClient();
 
-  /**
-   * Get seller profile
-   */
+export const sellerProfileService = {
   async getProfile() {
-    const { get } = useApiClient();
-    return await get(this.baseUrl);
-  }
+    return await apiClient.get("/api/seller/profile");
+  },
 
-  /**
-   * Create seller profile
-   */
   async createProfile(profileData) {
-    const { post } = useApiClient();
-    return await post(this.baseUrl, profileData);
-  }
+    return await apiClient.post("/api/seller/profile", profileData);
+  },
 
-  /**
-   * Update seller profile
-   */
   async updateProfile(updates) {
-    const { patch } = useApiClient();
-    return await patch(this.baseUrl, updates);
-  }
+    return await apiClient.patch("/api/seller/profile", updates);
+  },
 
-  /**
-   * Delete seller profile (soft delete)
-   */
   async deleteProfile() {
-    const { delete: del } = useApiClient();
-    return await del(this.baseUrl);
-  }
+    return await apiClient.delete("/api/seller/profile");
+  },
 
-  /**
-   * Upload store logo
-   */
   async uploadLogo(file, onUploadProgress) {
-    const { uploadFile } = useApiClient();
-    return await uploadFile(`${this.baseUrl}/images/logo`, file, {
+    return await apiClient.uploadFile("/api/seller/profile/images/logo", file, {
       fieldName: "image",
       onUploadProgress,
     });
-  }
+  },
 
-  /**
-   * Upload store banner
-   */
   async uploadBanner(file, onUploadProgress) {
-    const { uploadFile } = useApiClient();
-    return await uploadFile(`${this.baseUrl}/images/banner`, file, {
+    return await apiClient.uploadFile("/api/seller/profile/images/banner", file, {
       fieldName: "image",
       onUploadProgress,
     });
-  }
+  },
 
-  /**
-   * Archive profile (set status to archived)
-   */
   async archiveProfile() {
-    const { patch } = useApiClient();
-    return await patch(this.baseUrl, { status: "archived" });
-  }
+    return await apiClient.patch("/api/seller/profile", { status: "archived" });
+  },
 
-  /**
-   * Restore profile (set status to active)
-   */
   async restoreProfile() {
-    const { patch } = useApiClient();
-    return await patch(this.baseUrl, { status: "active" });
+    return await apiClient.patch("/api/seller/profile", { status: "active" });
   }
-}
-
-export const sellerProfileService = new SellerProfileService();
+};

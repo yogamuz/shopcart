@@ -1,79 +1,185 @@
-<!-- layouts/SellerLayout.vue -->
+<!-- layouts/SellerLayout.vue - Shared layout for all seller pages -->
 <template>
-  <div class="seller-layout">
-    <header class="seller-header">
-      <div class="container mx-auto px-4 flex items-center justify-between h-16">
-        <h1 class="text-xl font-bold">Seller Dashboard</h1>
-        <div class="flex items-center gap-4">
-          <button @click="$router.push('/')" class="btn-secondary">
-            Back to Store
-          </button>
-          <button @click="handleLogout" class="btn-danger">
-            Logout
-          </button>
-        </div>
-      </div>
-    </header>
+  <div class="min-h-screen bg-[#FAFBFD] font-inter">
+    <!-- Sidebar -->
+    <Sidebar
+      :collapsed="sidebarCollapsed"
+      :order-notification-count="orderNotificationCount"
+      :is-mobile="isMobile"
+      @toggle-sidebar="toggleSidebar"
+    />
 
-    <div class="seller-content">
-      <SellerSidebar class="seller-sidebar" />
-      <main class="seller-main">
-        <RouterView />
+    <!-- Main Content -->
+    <div
+      :class="[
+        'transition-all duration-300 ml-0',
+        sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64',
+      ]"
+    >
+      <!-- Header -->
+      <Header
+        :title="pageTitle"
+        :search-placeholder="searchPlaceholder"
+        :notification-count="3"
+        :show-search="showSearch"
+        :user-name="sellerDisplayName"
+        :user-logo="sellerLogo"
+        @toggle-sidebar="toggleSidebar"
+        @search="handleGlobalSearch"
+        @search-clear="handleGlobalSearchClear"
+      />
+
+      <!-- Router View - Dynamic page content -->
+      <main class="p-3 sm:p-4 lg:p-6">
+        <router-view
+          v-slot="{ Component }"
+          @orders-count-updated="handleOrdersCountUpdated"
+        >
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/authStore';
-import SellerSidebar from '@/components/Layout/Sidebar/SellerSidebar.vue';
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useRoute } from "vue-router";
+import Sidebar from "@/components/Seller/Sidebar.vue";
+import Header from "@/components/Seller/Header.vue";
+import { useSellerProfile } from "@/composables/useSellerProfile";
 
-const router = useRouter();
-const authStore = useAuthStore();
+const route = useRoute();
 
-const handleLogout = async () => {
-  await authStore.logout();
-  router.push('/');
+// State
+const sidebarCollapsed = ref(false);
+const isMobile = ref(false);
+const totalOrdersCount = ref(0);
+
+// Seller profile
+const { profile, fetchProfile } = useSellerProfile();
+
+// Computed
+const sellerDisplayName = computed(() => profile.value?.storeName || "Seller");
+const sellerLogo = computed(() => profile.value?.logo || null);
+const orderNotificationCount = computed(() => totalOrdersCount.value);
+
+// Page-specific computed based on route
+const pageTitle = computed(() => route.meta?.title || "Seller Dashboard");
+
+const searchPlaceholder = computed(() => {
+  const placeholders = {
+    "/seller/dashboard": "Search...",
+    "/seller/products": "Search products...",
+    "/seller/orders": "Search cust or product",
+    "/seller/analytics": "Search reports...",
+    "/seller/wallet": "Search transactions...",
+    "/seller/profile": "Search...",
+    "/seller/settings": "Search settings...",
+  };
+  return placeholders[route.path] || "Search...";
+});
+
+const showSearch = computed(() => route.path !== "/seller/dashboard");
+
+// Methods
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 1024;
+  if (isMobile.value) {
+    sidebarCollapsed.value = true;
+  }
 };
+
+const toggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+};
+
+const handleGlobalSearch = (query) => {
+  console.log("Global search:", query);
+};
+
+const handleGlobalSearchClear = () => {
+  console.log("Clear search");
+};
+
+const handleOrdersCountUpdated = (count) => {
+  totalOrdersCount.value = count;
+};
+
+// Auto-collapse sidebar on mobile
+watch(() => route.path, () => {
+  if (isMobile.value) {
+    sidebarCollapsed.value = true;
+  }
+});
+
+// Lifecycle
+onMounted(() => {
+  window.addEventListener("resize", checkScreenSize);
+  checkScreenSize();
+
+  fetchProfile().catch(err => {
+    console.error("Failed to fetch seller profile:", err);
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", checkScreenSize);
+});
 </script>
 
 <style scoped>
-/* Same structure as DashboardLayout */
-.seller-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.font-inter {
+  font-family: "Inter", sans-serif;
 }
 
-.seller-header {
-  background: #1e293b;
-  color: white;
-  border-bottom: 1px solid #334155;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+main {
+  margin-top: 0 !important;
+  padding-top: 0.75rem !important;
 }
 
-.seller-content {
-  display: flex;
-  flex: 1;
+@media (min-width: 640px) {
+  main {
+    padding-top: 1rem !important;
+  }
 }
 
-.seller-sidebar {
-  width: 250px;
-  background: #0f172a;
-  color: white;
-  position: sticky;
-  top: 64px;
-  height: calc(100vh - 64px);
-  overflow-y: auto;
+@media (min-width: 1024px) {
+  main {
+    padding-top: 1.5rem !important;
+  }
 }
 
-.seller-main {
-  flex: 1;
-  padding: 2rem;
-  background: #f8fafc;
-  overflow-y: auto;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>

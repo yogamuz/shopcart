@@ -650,48 +650,70 @@
 </template>
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from "vue";
-import { useSellerProfile } from "@/composables/useSellerProfile";
+import { useSellerProfileStore } from "@/stores/sellerProfileStore";
+import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/authStore";
 import AvatarCropModal from "@/components/User/AvatarCropModal.vue";
-import { Store, ImagePlus, Upload, Instagram, Facebook, Twitter, Music, Youtube, MessageCircle, Archive, ArchiveRestore } from "lucide-vue-next";
+import {
+  Store,
+  ImagePlus,
+  Upload,
+  Instagram,
+  Facebook,
+  Twitter,
+  Music,
+  Youtube,
+  MessageCircle,
+  Archive,
+  ArchiveRestore,
+} from "lucide-vue-next";
 
 // Get auth store to watch for user changes
 const authStore = useAuthStore();
 
-// Use the composable (now backed by Pinia store)
+// Use Pinia store directly
+const sellerProfileStore = useSellerProfileStore();
+
+// Extract reactive state with storeToRefs
 const {
   profile,
   hasProfile,
   storeName,
-  isLoadingProfile,
+  isLoading,
   isCreating,
   isUpdating,
   isUploadingLogo,
   isUploadingBanner,
   uploadProgress,
-  profileError,
-  createError,
-  updateError,
+  error,
+  profileCompleteness,
+} = storeToRefs(sellerProfileStore);
+const {
   createProfile,
   updateProfile,
   uploadLogo,
   uploadBanner,
   fetchProfile,
-  profileCompleteness,
   clearProfile,
   archiveProfile,
   restoreProfile,
-} = useSellerProfile();
+  cancelActiveRequest,
+} = sellerProfileStore;
+
+// Aliases for template compatibility
+const isLoadingProfile = isLoading;
+const profileError = error;
+const createError = error;
+const updateError = error;
 
 // Local state
 const showCreateForm = ref(false);
 const logoInput = ref(null);
 const bannerInput = ref(null);
-// Crop modal states
 const showCropModal = ref(false);
 const tempImageSrc = ref("");
 const tempFileName = ref("");
-const currentUploadType = ref(""); // "logo" or "banner"
+const currentUploadType = ref("");
 
 const createForm = ref({
   storeName: "",
@@ -945,13 +967,17 @@ const extractUsername = url => {
   }
 };
 const confirmArchiveProfile = () => {
-  if (confirm('Are you sure you want to archive your store? Your store will be hidden from customers and you cannot sell products while archived.')) {
+  if (
+    confirm(
+      "Are you sure you want to archive your store? Your store will be hidden from customers and you cannot sell products while archived."
+    )
+  ) {
     handleArchiveProfile();
   }
 };
 
 const confirmRestoreProfile = () => {
-  if (confirm('Are you sure you want to activate your store? Your store will be visible to customers again.')) {
+  if (confirm("Are you sure you want to activate your store? Your store will be visible to customers again.")) {
     handleRestoreProfile();
   }
 };
@@ -960,10 +986,10 @@ const handleArchiveProfile = async () => {
   try {
     isArchiving.value = true;
     await archiveProfile();
-    alert('Store archived successfully');
+    alert("Store archived successfully");
   } catch (err) {
-    console.error('Archive profile error:', err);
-    alert(err.message || 'Failed to archive store');
+    console.error("Archive profile error:", err);
+    alert(err.message || "Failed to archive store");
   } finally {
     isArchiving.value = false;
   }
@@ -973,10 +999,10 @@ const handleRestoreProfile = async () => {
   try {
     isRestoring.value = true;
     await restoreProfile();
-    alert('Store activated successfully');
+    alert("Store activated successfully");
   } catch (err) {
-    console.error('Restore profile error:', err);
-    alert(err.message || 'Failed to activate store');
+    console.error("Restore profile error:", err);
+    alert(err.message || "Failed to activate store");
   } finally {
     isRestoring.value = false;
   }
@@ -986,7 +1012,6 @@ watch(
   () => profile.value,
   newProfile => {
     if (newProfile) {
-
       // Update form with latest profile data
       updateForm.value = {
         storeName: newProfile.storeName || "",
@@ -1018,7 +1043,6 @@ const unwatchUser = watch(
     const oldUserId = oldUser?._id || oldUser?.id;
 
     if (newUserId !== oldUserId) {
-
       // ✅ TAMBAH: Cancel active requests first
       const { cancelActiveRequest } = useSellerProfileStore();
       cancelActiveRequest();
@@ -1049,7 +1073,6 @@ onUnmounted(() => {
   unwatchInitializing(); // ✅ Cleanup
 });
 onMounted(async () => {
-
   const authStore = useAuthStore();
 
   // Tunggu auth initialize selesai

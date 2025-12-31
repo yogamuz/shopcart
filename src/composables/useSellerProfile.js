@@ -45,6 +45,9 @@ export const useSellerProfile = () => {
     if (!error.value) return null;
     return error.value;
   });
+    const profileLogo = computed(() => {
+    return profile.value?.logo || null;
+  });
 
   const createError = computed(() => {
     if (!error.value || !isCreating.value) return null;
@@ -83,6 +86,7 @@ export const useSellerProfile = () => {
     createError,
     updateError,
     uploadError,
+    profileLogo,
 
     // Actions
     fetchProfile,

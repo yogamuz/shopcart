@@ -1,12 +1,13 @@
-// composables/useSellerProduct.js
-import { ref, computed, onMounted } from "vue";
+// stores/sellerProductStore.js - WITH AUTH CHECK
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 import { sellerProductService } from "@/services/sellerProductService";
+import { useAuthStore } from "@/stores/authStore"; // ✅ ADD THIS
 
-export const useSellerProduct = (options = {}) => {
-  const { autoFetch = true, fetchParams = {} } = options;
-
-  // Reactive state
+export const useSellerProductStore = defineStore("sellerProduct", () => {
+  // ========== STATE ==========
   const products = ref([]);
+  const currentProduct = ref(null);
   const categories = ref([
     { id: "66d1a2b3c4e5f6789abcdef3", name: "Toys" },
     { id: "66d1a2b3c4e5f6789abcdef1", name: "Fashion" },
@@ -16,102 +17,81 @@ export const useSellerProduct = (options = {}) => {
     { id: "66d1a2b3c4e5f6789abcdef0", name: "Beauty" },
   ]);
   const storeInfo = ref(null);
+  const pagination = ref({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 12,
+  });
   const isLoading = ref(false);
   const error = ref(null);
-
-  // Computed
-  const hasProducts = computed(() => products.value.length > 0);
-  const totalProducts = computed(() => products.value.length);
   const dashboardStats = ref(null);
   const productAnalytics = ref(null);
+
+  // ========== COMPUTED ==========
+  const hasProducts = computed(() => products.value.length > 0);
+  const totalProducts = computed(() => products.value.length);
+  const activeProducts = computed(() => products.value.filter(p => p.isActive));
+  const inactiveProducts = computed(() => products.value.filter(p => !p.isActive));
+
+  // ========== HELPERS ==========
+  const setLoading = loading => {
+    isLoading.value = loading;
+  };
+
+  const setError = err => {
+    error.value = typeof err === "string" ? err : err.message || "An error occurred";
+  };
+
+  const clearError = () => {
+    error.value = null;
+  };
+
   const formatChartDate = dateString => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    const options = { day: "numeric", month: "short" };
-    return new Intl.DateTimeFormat("id-ID", options).format(date);
+    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(date);
   };
+
+  // ========== ACTIONS ==========
   const fetchProducts = async (params = {}) => {
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
 
-      // Clean params dan tambahkan search logic
-      const cleanParams = Object.keys(params).reduce((acc, key) => {
-        if (!key.includes("isTrusted") && !key.includes("_vts") && !key.includes("target")) {
-          acc[key] = params[key];
-        }
-        return acc;
-      }, {});
-
-      // Tambahkan default params untuk search
-      const finalParams = {
-        ...fetchParams,
-        ...cleanParams,
-        // Jika ada search query, pastikan dikirim ke server
-        ...(cleanParams.search && { search: cleanParams.search }),
-        ...(cleanParams.category && { category: cleanParams.category }),
-      };
-
-      const response = await sellerProductService.getProducts(finalParams);
-
-      // REVISI: Lebih specific dalam checking response structure
-      if (response.success && response.data && typeof response.data === "object") {
-        // Pastikan products selalu array, bahkan jika undefined
-        products.value = Array.isArray(response.data.products) ? response.data.products : [];
-        storeInfo.value = response.data.store || null;
-      } else {
-        // Jangan throw error jika hanya products kosong
-        console.warn("Unexpected API response structure:", response);
-        products.value = [];
-        storeInfo.value = null;
-      }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      error.value = err.message || "Terjadi kesalahan saat mengambil data products";
-      products.value = [];
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const createProduct = async productData => {
-    try {
-      error.value = null;
-
-      // Validasi data di frontend
-      if (
-        !productData.title ||
-        !productData.description ||
-        !productData.price ||
-        !productData.stock ||
-        !productData.category
-      ) {
-        throw new Error("Semua field wajib diisi");
-      }
-
-      // Format data sesuai backend expectation
-      const formattedData = {
-        title: productData.title.trim(),
-        description: productData.description.trim(),
-        price: Number(productData.price),
-        stock: Number(productData.stock),
-        category: productData.category, // Pastikan ini string ID
-      };
-
-      // Validasi tipe data
-      if (isNaN(formattedData.price) || formattedData.price <= 0) {
-        throw new Error("Harga harus berupa angka yang valid dan lebih besar dari 0");
-      }
-
-      if (isNaN(formattedData.stock) || formattedData.stock < 0) {
-        throw new Error("Stok harus berupa angka yang valid dan tidak boleh negatif");
-      }
-
-      const response = await sellerProductService.createProduct(formattedData);
+      // ✅ NO AUTH CHECK
+      const response = await sellerProductService.getProducts(params);
 
       if (response.success && response.data) {
-        // OPTIMISTIC UPDATE: Tambah product baru ke awal array
-        // Handle nested product structure dari backend response
+        products.value = Array.isArray(response.data.products) ? response.data.products : [];
+        storeInfo.value = response.data.store || null;
+        if (response.data.pagination) {
+          pagination.value = response.data.pagination;
+        }
+      } else {
+        products.value = [];
+      }
+    } catch (err) {
+      console.error("❌ Error fetching products:", err);
+
+      if (err.status === 401 || err.status === 403) {
+        error.value = "Authentication required. Please login again.";
+      } else {
+        setError(err);
+      }
+
+      products.value = [];
+    } finally {
+      setLoading(false);
+    }
+  };
+  const createProduct = async productData => {
+    try {
+      clearError();
+
+      const response = await sellerProductService.createProduct(productData);
+
+      if (response.success && response.data) {
         const productData = response.data.product || response.data;
         const newProduct = {
           id: productData.id,
@@ -129,83 +109,61 @@ export const useSellerProduct = (options = {}) => {
         };
 
         products.value.unshift(newProduct);
-
         return newProduct;
       } else {
-        throw new Error(response.message || "Gagal membuat product");
+        throw new Error(response.message || "Failed to create product");
       }
     } catch (err) {
       console.error("Error creating product:", err);
-      // Cleanup any optimistic updates yang gagal
-      if (err.status === 400 && err.message?.includes("Validation failed")) {
-        // Jika ini adalah produk duplicate atau conflict, remove dari local state
-        const potentialDuplicates = products.value.filter(p => p.title === formattedData.title && !p.id);
-
-        if (potentialDuplicates.length > 0) {
-          products.value = products.value.filter(p => !(p.title === formattedData.title && !p.id));
-        }
-      }
-
-      // Log detail error untuk debugging
-      if (err.data && err.data.errors) {
-        console.error("Backend error response:", err.data);
-        console.error("Backend validation errors:", err.data.errors);
-      }
-
-      // Tambah logging untuk melihat full error structure
-      console.error("Full error object:", JSON.stringify(err, null, 2));
-
-      error.value = err.message || "Terjadi kesalahan saat membuat product";
+      setError(err);
       throw err;
     }
   };
 
   const updateProduct = async (productId, productData) => {
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
 
       const response = await sellerProductService.updateProduct(productId, productData);
 
       if (response.success && response.data) {
-        // Update product di array
         const index = products.value.findIndex(p => p.id === productId);
         if (index !== -1) {
           products.value[index] = response.data;
         }
         return response.data;
       } else {
-        throw new Error(response.message || "Gagal update product");
+        throw new Error(response.message || "Failed to update product");
       }
     } catch (err) {
       console.error("Error updating product:", err);
-      error.value = err.message || "Terjadi kesalahan saat update product";
+      setError(err);
       throw err;
     } finally {
-      isLoading.value = false;
+      setLoading(false);
     }
   };
 
   const deleteProduct = async productId => {
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
 
       const response = await sellerProductService.deleteProduct(productId);
 
       if (response.success) {
-        // Hapus product dari array
         products.value = products.value.filter(p => p.id !== productId);
         return true;
       } else {
-        throw new Error(response.message || "Gagal hapus product");
+        throw new Error(response.message || "Failed to delete product");
       }
     } catch (err) {
       console.error("Error deleting product:", err);
-      error.value = err.message || "Terjadi kesalahan saat hapus product";
+      setError(err);
       throw err;
     } finally {
-      isLoading.value = false;
+      setLoading(false);
     }
   };
 
@@ -215,18 +173,17 @@ export const useSellerProduct = (options = {}) => {
       const response = await sellerProductService.toggleProductStatus(product.id, newStatus);
 
       if (response.success) {
-        // Update status di array
         const index = products.value.findIndex(p => p.id === product.id);
         if (index !== -1) {
           products.value[index].isActive = newStatus;
         }
         return true;
       } else {
-        throw new Error(response.message || "Gagal update status product");
+        throw new Error(response.message || "Failed to toggle status");
       }
     } catch (err) {
-      console.error("Error toggling product status:", err);
-      error.value = err.message || "Terjadi kesalahan saat update status";
+      console.error("Error toggling status:", err);
+      setError(err);
       throw err;
     }
   };
@@ -235,10 +192,9 @@ export const useSellerProduct = (options = {}) => {
     let originalImage = null;
 
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
 
-      // OPTIMISTIC UPDATE: Langsung ganti gambar dengan placeholder
       const index = products.value.findIndex(p => p.id === productId);
       if (index !== -1) {
         originalImage = products.value[index].image;
@@ -248,41 +204,36 @@ export const useSellerProduct = (options = {}) => {
       const response = await sellerProductService.uploadProductImage(productId, imageFile, onProgress);
 
       if (response.success && response.data) {
-        // Update dengan gambar baru setelah upload berhasil
         if (index !== -1) {
           products.value[index].image = response.data.imageUrl || response.data.url;
         }
         return response.data;
       } else {
-        // Restore gambar asli jika upload gagal
-        if (index !== -1) {
+        if (index !== -1 && originalImage) {
           products.value[index].image = originalImage;
         }
-        throw new Error(response.message || "Gagal upload gambar");
+        throw new Error(response.message || "Failed to upload image");
       }
     } catch (err) {
       console.error("Error uploading image:", err);
-      error.value = err.message || "Terjadi kesalahan saat upload gambar";
-
-      // Restore gambar asli jika error
       const index = products.value.findIndex(p => p.id === productId);
       if (index !== -1 && originalImage) {
         products.value[index].image = originalImage;
       }
+      setError(err);
       throw err;
     } finally {
-      isLoading.value = false;
+      setLoading(false);
     }
   };
 
   const bulkToggleStatus = async (productIds, isActive) => {
     try {
-      error.value = null;
+      clearError();
 
       const response = await sellerProductService.bulkToggleStatus(productIds, isActive);
 
       if (response.success) {
-        // Update status semua products yang diselect
         productIds.forEach(productId => {
           const index = products.value.findIndex(p => p.id === productId);
           if (index !== -1) {
@@ -291,44 +242,47 @@ export const useSellerProduct = (options = {}) => {
         });
         return true;
       } else {
-        throw new Error(response.message || "Gagal update status products");
+        throw new Error(response.message || "Failed to bulk toggle status");
       }
     } catch (err) {
-      console.error("Error bulk toggling status:", err);
-      error.value = err.message || "Terjadi kesalahan saat bulk update status";
+      console.error("Error bulk toggling:", err);
+      setError(err);
       throw err;
     }
   };
 
   const bulkDeleteProducts = async productIds => {
     try {
-      error.value = null;
+      clearError();
 
       const response = await sellerProductService.bulkDeleteProducts(productIds);
 
       if (response.success) {
-        // Hapus products dari array
         products.value = products.value.filter(p => !productIds.includes(p.id));
         return true;
       } else {
-        throw new Error(response.message || "Gagal delete products");
+        throw new Error(response.message || "Failed to bulk delete");
       }
     } catch (err) {
       console.error("Error bulk deleting:", err);
-      error.value = err.message || "Terjadi kesalahan saat bulk delete";
+      setError(err);
       throw err;
     }
   };
 
   const fetchDashboardStats = async (period = "30d") => {
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
+
+      // ✅ NO AUTH CHECK - Let interceptor handle it
+      console.log("📊 Fetching dashboard stats with period:", period);
 
       const response = await sellerProductService.getDashboardStats(period);
 
       if (response.success && response.data) {
-        // Format tanggal untuk chart display
+        console.log("✅ Dashboard stats received");
+
         dashboardStats.value = {
           ...response.data,
           revenueData:
@@ -342,54 +296,78 @@ export const useSellerProduct = (options = {}) => {
               date: formatChartDate(item.date),
             })) || [],
         };
+
         return dashboardStats.value;
       } else {
-        console.warn("Unexpected dashboard stats response:", response);
         dashboardStats.value = null;
       }
     } catch (err) {
-      console.error("Error fetching dashboard stats:", err);
-      error.value = err.message || "Failed to fetch dashboard statistics";
+      console.error("❌ Error fetching dashboard stats:", err);
+
+      // ✅ HANDLE auth errors gracefully
+      if (err.status === 401 || err.status === 403) {
+        error.value = "Authentication required. Please login again.";
+      } else {
+        setError(err);
+      }
+
       dashboardStats.value = null;
     } finally {
-      isLoading.value = false;
+      setLoading(false);
     }
   };
 
   const fetchProductAnalytics = async (period = "30d") => {
     try {
-      isLoading.value = true;
-      error.value = null;
+      setLoading(true);
+      clearError();
 
+      // ✅ NO AUTH CHECK
       const response = await sellerProductService.getProductAnalytics(period);
 
       if (response.success && response.data) {
         productAnalytics.value = response.data;
       } else {
-        console.warn("Unexpected product analytics response:", response);
         productAnalytics.value = null;
       }
     } catch (err) {
-      console.error("Error fetching product analytics:", err);
-      error.value = err.message || "Terjadi kesalahan saat mengambil product analytics";
+      console.error("❌ Error fetching product analytics:", err);
+
+      if (err.status === 401 || err.status === 403) {
+        error.value = "Authentication required. Please login again.";
+      } else {
+        setError(err);
+      }
+
       productAnalytics.value = null;
     } finally {
-      isLoading.value = false;
+      setLoading(false);
     }
   };
 
-  // Lifecycle
-  onMounted(async () => {
-    if (autoFetch) {
-      await fetchProducts(fetchParams);
-    }
-  });
+  const resetStore = () => {
+    products.value = [];
+    currentProduct.value = null;
+    storeInfo.value = null;
+    pagination.value = {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 0,
+      itemsPerPage: 12,
+    };
+    isLoading.value = false;
+    error.value = null;
+    dashboardStats.value = null;
+    productAnalytics.value = null;
+  };
 
   return {
     // State
     products,
+    currentProduct,
     categories,
     storeInfo,
+    pagination,
     isLoading,
     error,
     dashboardStats,
@@ -398,8 +376,10 @@ export const useSellerProduct = (options = {}) => {
     // Computed
     hasProducts,
     totalProducts,
+    activeProducts,
+    inactiveProducts,
 
-    // Methods
+    // Actions
     fetchProducts,
     createProduct,
     updateProduct,
@@ -410,5 +390,6 @@ export const useSellerProduct = (options = {}) => {
     bulkDeleteProducts,
     fetchDashboardStats,
     fetchProductAnalytics,
+    resetStore,
   };
-};
+});
