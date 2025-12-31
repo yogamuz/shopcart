@@ -154,7 +154,6 @@ export const useAuthStore = defineStore("auth", () => {
           const { useCartStore } = await import("@/stores/cartStore");
           const cartStore = useCartStore();
           await cartStore.initializeCart();
-          console.log("✅ Cart initialized after login");
         } catch (err) {
           console.warn("⚠️ Failed to initialize cart after login:", err);
         }
@@ -197,7 +196,6 @@ export const useAuthStore = defineStore("auth", () => {
           const { useCartStore } = await import("@/stores/cartStore");
           const cartStore = useCartStore();
           await cartStore.initializeCart();
-          console.log("✅ Cart initialized after register");
         } catch (err) {
           console.warn("⚠️ Failed to initialize cart after register:", err);
         }
@@ -225,7 +223,7 @@ export const useAuthStore = defineStore("auth", () => {
     }
   };
 
-const logout = async () => {
+  const logout = async () => {
     try {
       setLoading(true);
 
@@ -252,7 +250,6 @@ const logout = async () => {
         const { useCartStore } = await import("@/stores/cartStore");
         const cartStore = useCartStore();
         cartStore.resetCart();
-        console.log("✅ Cart cleared on logout");
       } catch (err) {
         console.warn("⚠️ Failed to clear cart:", err);
       }
@@ -401,55 +398,48 @@ const logout = async () => {
   };
 
   const initialize = async () => {
-    // Single-flight: return existing promise if already running
+    // Single-flight guard
     if (initializePromise) {
       return initializePromise;
     }
 
-    // Already initialized
+    // Jangan init dua kali
     if (isInitialized.value) {
       return;
     }
 
     initializePromise = (async () => {
       try {
-        // Mobile: try to restore from localStorage refresh token
+        if (import.meta.env.PROD) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+        // === MOBILE ===
         if (isMobile()) {
           const mobileRefreshToken = getRefreshTokenMobile();
+
           if (mobileRefreshToken) {
             const refreshed = await refreshToken();
 
             if (refreshed) {
-              console.log("✅ Session restored");
-
-              // ✅ FIX: Initialize cart after session restore
               try {
                 const { useCartStore } = await import("@/stores/cartStore");
-                const cartStore = useCartStore();
-                await cartStore.initializeCart();
-                console.log("✅ Cart initialized after session restore");
-              } catch (err) {
-                console.warn("⚠️ Failed to initialize cart after restore:", err);
-              }
+                await useCartStore().initializeCart();
+              } catch {}
             } else {
-              console.log("❌ Session restore failed");
-              clearAuth();
+              console.warn("Init refresh failed (mobile), keeping session");
             }
           }
         }
 
-        // Desktop/Web: try refresh (uses HTTP-only cookie)
+        // === WEB / DESKTOP ===
         const refreshed = await refreshToken();
 
-        if (refreshed) {
-        } else {
-          clearAuth();
+        if (!refreshed) {
+          console.warn("Init refresh failed (web), waiting for next request");
         }
       } catch (err) {
-        console.error("❌ Initialize error:", err);
-
-        // On initialization error, clear to be safe
-        clearAuth();
+        // ❌ Jangan logout hanya karena init error
+        console.warn("Init error, skipping logout:", err);
       } finally {
         isInitialized.value = true;
         initializePromise = null;
