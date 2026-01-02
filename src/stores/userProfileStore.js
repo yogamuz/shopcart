@@ -135,18 +135,18 @@ export const useUserProfileStore = defineStore("userProfile", () => {
   const fetchProfile = async (forceRefresh = false) => {
     // ✅ PERBAIKAN 1: Cek apakah sedang loading untuk prevent duplicate requests
     if (loading.value) {
-      console.log("⏳ Already fetching profile, waiting...");
+      ;
       return { success: false, message: "Loading in progress" };
     }
 
     // ✅ PERBAIKAN 2: Skip jika ada data valid DAN tidak force refresh
     if (!forceRefresh && profile.value !== null && Object.keys(profile.value).length > 0) {
-      console.log("📦 Using cached profile data");
+      ;
       return { success: true, data: profile.value };
     }
 
     try {
-      console.log("🔄 Fetching profile from server...");
+      ;
       setLoading(true);
       clearError();
 
@@ -160,7 +160,7 @@ export const useUserProfileStore = defineStore("userProfile", () => {
           addresses.value = response.data.addresses.list;
         }
 
-        console.log("✅ Profile loaded successfully:", profile.value);
+        ;
         return { success: true, data: profile.value };
       }
     } catch (err) {
@@ -344,12 +344,12 @@ export const useUserProfileStore = defineStore("userProfile", () => {
   const fetchAddresses = async (forceRefresh = false) => {
     // ✅ PERBAIKAN: Cek loading state
     if (loading.value) {
-      console.log("⏳ Already fetching addresses, waiting...");
+      ;
       return { success: false, message: "Loading in progress" };
     }
 
     if (!forceRefresh && addresses.value.length > 0) {
-      console.log("📦 Using cached addresses data");
+      ;
       return { success: true, data: addresses.value };
     }
 
@@ -481,7 +481,7 @@ export const useUserProfileStore = defineStore("userProfile", () => {
   };
 
   const clearCache = () => {
-    console.log("🗑️ Clearing profile cache");
+    ;
     profile.value = null;
     addresses.value = [];
     error.value = null;

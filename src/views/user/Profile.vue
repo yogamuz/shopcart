@@ -515,7 +515,7 @@ const handleClickOutside = event => {
 // ✅ PERBAIKAN: Fungsi untuk load data
 const loadProfileData = async () => {
   try {
-    console.log("👤 Loading profile data...");
+    ;
     
     // ✅ Fetch profile jika belum ada atau force refresh
     if (!userProfileStore.profile) {
@@ -533,7 +533,7 @@ const loadProfileData = async () => {
 
 // ========== LIFECYCLE ==========
 onMounted(async () => {
-  console.log("🔄 Profile component mounted");
+  ;
   document.addEventListener("click", handleClickOutside);
   
   // ✅ Load data saat component mounted
@@ -541,7 +541,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  console.log("👋 Profile component unmounted");
+  ;
   document.removeEventListener("click", handleClickOutside);
 });
 
@@ -550,7 +550,7 @@ watch(
   () => router.currentRoute.value.name,
   async (newRouteName) => {
     if (newRouteName === "UserProfile") {
-      console.log("👤 Profile page visited via route change");
+      ;
       await loadProfileData();
     }
   },
@@ -562,7 +562,7 @@ watch(
   () => userProfileStore.profile,
   newProfile => {
     if (newProfile) {
-      console.log("📝 Updating profile form with new data");
+      ;
       profileForm.value = {
         firstName: newProfile.firstName || "",
         lastName: newProfile.lastName || "",

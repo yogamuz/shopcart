@@ -396,7 +396,7 @@ const getInitials = name => {
 
 const saveProfile = () => {
   // Mock save profile
-  console.log("Saving profile:", profile.value);
+  ;
   // In real app, this would call API
 };
 
@@ -412,7 +412,7 @@ const changePassword = async () => {
     successMessage.value = "";
     errorMessage.value = "";
 
-    console.log("🔐 Changing password...");
+    ;
 
     // Call API
     const result = await changePasswordAuth(
@@ -431,7 +431,7 @@ const changePassword = async () => {
       confirmPassword: "",
     };
 
-    console.log("✅ Password changed successfully");
+    ;
 
     // Auto-hide success message after 5 seconds
     setTimeout(() => {
@@ -450,7 +450,7 @@ const changePassword = async () => {
 
 const toggle2FA = () => {
   security.value.twoFactorEnabled = !security.value.twoFactorEnabled;
-  console.log("2FA toggled:", security.value.twoFactorEnabled);
+  ;
   // In real app, this would call API
 };
 
@@ -462,12 +462,12 @@ const toggleNotification = key => {
 };
 
 const saveNotificationSettings = () => {
-  console.log("Saving notification settings:", notifications.value);
+  ;
   // In real app, this would call API
 };
 
 const savePrivacySettings = () => {
-  console.log("Saving privacy settings:", privacy.value);
+  ;
   // In real app, this would call API
 };
 
@@ -475,7 +475,7 @@ const deleteAccount = () => {
   if (deleteConfirmText.value !== "DELETE") return;
 
   // Mock account deletion
-  console.log("Deleting account...");
+  ;
   showDeleteModal.value = false;
   deleteConfirmText.value = "";
   // In real app, this would call API and redirect to home
@@ -483,7 +483,7 @@ const deleteAccount = () => {
 
 onMounted(() => {
   // Load settings data
-  console.log("Loading settings data...");
+  ;
 });
 onMounted(() => {
   try {
@@ -511,7 +511,7 @@ onMounted(() => {
   }
 });
 onMounted(() => {
-  console.log("⚙️ Settings page mounted");
+  ;
   
   try {
     const savedSettings = localStorage.getItem('userSettings');
@@ -534,7 +534,7 @@ onMounted(() => {
         security.value = { ...security.value, ...parsed.security };
       }
       
-      console.log("⚙️ Settings loaded successfully");
+      ;
     }
   } catch (error) {
     console.error("Failed to load settings:", error);

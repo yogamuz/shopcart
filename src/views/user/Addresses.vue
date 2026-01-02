@@ -712,13 +712,13 @@ onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
 });
 onMounted(async () => {
-  console.log("📍 Addresses page mounted");
+  ;
   
   if (profileStore.addresses.length === 0) {
-    console.log("🔄 Fetching addresses...");
+    ;
     await profileStore.fetchAddresses(true);
   } else {
-    console.log("📍 Addresses already loaded:", profileStore.addresses.length);
+    ;
   }
 });
 </script>

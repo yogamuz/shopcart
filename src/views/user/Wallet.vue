@@ -737,7 +737,7 @@ watch(searchQuery, newQuery => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  console.log("💰 Wallet page mounted");
+  ;
   
   try {
     // ✅ Single initialization call
@@ -745,7 +745,7 @@ onMounted(async () => {
       autoRefresh: false,
       fetchStats: true,
     });
-    console.log("💰 Wallet initialized successfully");
+    ;
   } catch (error) {
     console.error("Failed to initialize wallet:", error);
   }
