@@ -12,10 +12,7 @@
         <div v-if="isAuthenticated" class="relative">
           <div v-if="isLoadingAvatar" class="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
 
-          <div
-            v-else-if="profileAvatarUrl"
-            class="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200"
-          >
+          <div v-else-if="profileAvatarUrl" class="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200">
             <img
               :src="profileAvatarUrl"
               :alt="getUserDisplayName()"
@@ -321,11 +318,7 @@ watch(
 watch(
   isAuthenticated,
   async (newVal, oldVal) => {
-    console.log("🔍 Mobile: Auth state changed:", { newVal, oldVal });
-
     if (newVal && !oldVal) {
-      console.log("✅ Mobile: User logged in - fetching profile");
-
       await nextTick();
 
       try {
@@ -339,7 +332,6 @@ watch(
         console.warn("⚠️ Mobile: Failed to fetch profile:", err);
       }
     } else if (!newVal && oldVal) {
-      console.log("🚪 Mobile: User logged out - clearing profile");
       profileStore.clearProfile();
     }
   }
@@ -401,14 +393,11 @@ const handleNavigation = async path => {
 
 const handleLogout = async () => {
   try {
-    console.log("🚪 Mobile: Starting logout...");
     closeAccountMenu();
 
     profileStore.clearProfile();
 
     await authStore.logout();
-
-    console.log("✅ Mobile: Logout successful");
 
     if (router.currentRoute.value.path !== "/") {
       await router.push("/");
@@ -428,30 +417,24 @@ const closeAuthModal = () => {
 };
 
 const handleLoginSuccess = async () => {
-  console.log("✅ Mobile: Login success handler called");
   showAuthModal.value = false;
 
   await nextTick();
 
   try {
-    console.log("🔄 Mobile: Fetching profile after login...");
     await profileStore.fetchProfile(true);
-    console.log("✅ Mobile: Profile fetched successfully after login");
   } catch (err) {
     console.warn("⚠️ Mobile: Failed to fetch profile after login:", err);
   }
 };
 
 const handleRegisterSuccess = async () => {
-  console.log("✅ Mobile: Register success handler called");
   showAuthModal.value = false;
 
   await nextTick();
 
   try {
-    console.log("🔄 Mobile: Fetching profile after register...");
     await profileStore.fetchProfile(true);
-    console.log("✅ Mobile: Profile fetched successfully after register");
   } catch (err) {
     console.warn("⚠️ Mobile: Failed to fetch profile after register:", err);
   }

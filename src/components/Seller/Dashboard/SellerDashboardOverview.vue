@@ -143,9 +143,9 @@ const formatCurrency = (value) => {
 
 const loadDashboardData = async (period = "30d") => {
   try {
-    console.log("📊 Loading dashboard data...");
+    ;
     await fetchDashboardStats(period);
-    console.log("✅ Dashboard data loaded:", dashboardStats.value);
+    ;
   } catch (err) {
     console.error("❌ Failed to load dashboard data:", err);
   }
@@ -161,7 +161,7 @@ watch(
   () => route.path,
   (newPath) => {
     if (newPath === '/seller/dashboard' && !dashboardData.value) {
-      console.log("🔄 Hot reload detected, re-fetching dashboard data");
+      ;
       loadDashboardData(selectedPeriod.value);
     }
   },
@@ -170,11 +170,11 @@ watch(
 
 // ✅ FIX: Always fetch on mount with console log
 onMounted(async () => {
-  console.log("🎬 Dashboard mounted, fetching data...");
+  ;
   if (!dashboardData.value) {
     await loadDashboardData(selectedPeriod.value);
   } else {
-    console.log("✅ Dashboard data already exists:", dashboardData.value);
+    ;
   }
 });
 </script>

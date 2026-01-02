@@ -359,9 +359,7 @@ const handlePeriodChange = async period => {
 
 // ✅ FIX: Always fetch on mount with console log
 onMounted(async () => {
-  console.log("🎬 Analytics page mounted, fetching analytics...");
   await fetchProductAnalytics(selectedPeriod.value);
-  console.log("✅ Analytics fetched:", productAnalytics.value);
 });
 </script>
 

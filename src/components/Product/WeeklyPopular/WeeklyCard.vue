@@ -196,7 +196,7 @@ const handleAddToCart = async () => {
   }
 
   if (isProductInCart.value) {
-    console.log(`${props.weeklyProduct.title} is already in cart`);
+    ;
     return;
   }
 

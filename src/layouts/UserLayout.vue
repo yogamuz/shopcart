@@ -71,7 +71,7 @@ onMounted(async () => {
       return;
     }
 
-    console.log("✅ Dashboard access granted");
+    ;
     isLoading.value = false;
 
     // Responsive setup

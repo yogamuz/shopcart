@@ -539,8 +539,6 @@ const loadMoreTransactions = async () => {
 };
 
 const processPayout = async () => {
-  console.log("Processing payout:", payoutAmount.value, selectedPayoutMethod.value);
-
   try {
     // Here you would call the actual payout API endpoint
     // await requestPayout(payoutAmount.value, selectedPayoutMethod.value);

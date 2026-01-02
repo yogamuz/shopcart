@@ -14,11 +14,7 @@ export const adminWalletService = {
         params: queryParams,
       });
 
-      console.log("Full Response:", response);
-
       const { success, data, message } = response;
-
-      console.log("Parsed response:", { success, data, message });
 
       if (!success) {
         throw new Error(message || "Failed to fetch transactions");
@@ -30,8 +26,6 @@ export const adminWalletService = {
 
       const transactions = Array.isArray(data.transactions) ? data.transactions : [];
       const pagination = data.pagination || {};
-
-      console.log(`Successfully fetched ${transactions.length} transactions`);
 
       return {
         transactions,
@@ -61,8 +55,6 @@ export const adminWalletService = {
       // FIXED: data adalah array langsung, bukan { users: [] }
       const users = Array.isArray(data) ? data : [];
 
-      console.log(`Fetched ${users.length} users`);
-
       return {
         users,
       };
@@ -72,90 +64,83 @@ export const adminWalletService = {
     }
   },
 
+  /**
+   * Top-up user balance
+   */
+  async topUpBalance(userId, amount, description = "Admin top-up") {
+    try {
+      const payload = {
+        amount,
+        description,
+      };
 
-/**
- * Top-up user balance
- */
-async topUpBalance(userId, amount, description = "Admin top-up") {
-  try {
-    const payload = {
-      amount,
-      description,
-    };
+      const response = await api.post(`${BASE_URL}/${userId}/top-up`, payload);
 
-    const response = await api.post(`${BASE_URL}/${userId}/top-up`, payload);
+      // FIXED: Backend return { success: true, data: {...} }
+      // Jadi cek response.success langsung, bukan response.data.success
+      if (!response.success) {
+        console.warn("⚠️ [topUpBalance] Response tidak success:", response);
+        throw new Error(response.message || "Top up failed");
+      }
 
-    console.log("🔍 [topUpBalance] Full response:", response);
-    
-    // FIXED: Backend return { success: true, data: {...} }
-    // Jadi cek response.success langsung, bukan response.data.success
-    if (!response.success) {
-      console.warn("⚠️ [topUpBalance] Response tidak success:", response);
-      throw new Error(response.message || "Top up failed");
+      // Return response.data yang berisi { transaction, newBalance }
+      return response.data;
+    } catch (error) {
+      console.error("Service Error - topUpBalance:", error);
+      throw new Error(error.message || "Failed to top up balance");
     }
+  },
 
-    // Return response.data yang berisi { transaction, newBalance }
-    return response.data;
-  } catch (error) {
-    console.error("Service Error - topUpBalance:", error);
-    throw new Error(error.message || "Failed to top up balance");
-  }
-},
+  /**
+   * Deduct user balance
+   */
+  async deductBalance(userId, amount, description = "Admin deduction", reason) {
+    try {
+      const payload = {
+        amount,
+        description,
+        reason,
+      };
 
-/**
- * Deduct user balance
- */
-async deductBalance(userId, amount, description = "Admin deduction", reason) {
-  try {
-    const payload = {
-      amount,
-      description,
-      reason,
-    };
+      const response = await api.post(`${BASE_URL}/${userId}/deduct`, payload);
 
-    const response = await api.post(`${BASE_URL}/${userId}/deduct`, payload);
+      // FIXED: Backend return { success: true, data: {...} }
+      if (!response.success) {
+        console.warn("⚠️ [deductBalance] Response tidak success:", response);
+        throw new Error(response.message || "Deduction failed");
+      }
 
-    console.log("🔍 [deductBalance] Full response:", response);
-    
-    // FIXED: Backend return { success: true, data: {...} }
-    if (!response.success) {
-      console.warn("⚠️ [deductBalance] Response tidak success:", response);
-      throw new Error(response.message || "Deduction failed");
+      // Return response.data yang berisi { transaction, newBalance }
+      return response.data;
+    } catch (error) {
+      console.error("Service Error - deductBalance:", error);
+      throw new Error(error.message || "Failed to deduct balance");
     }
+  },
 
-    // Return response.data yang berisi { transaction, newBalance }
-    return response.data;
-  } catch (error) {
-    console.error("Service Error - deductBalance:", error);
-    throw new Error(error.message || "Failed to deduct balance");
-  }
-},
+  /**
+   * Reverse a transaction
+   */
+  async reverseTransaction(transactionId, reason = "Admin reversal") {
+    try {
+      const payload = {
+        reason,
+        confirmReverse: true,
+      };
 
-/**
- * Reverse a transaction
- */
-async reverseTransaction(transactionId, reason = "Admin reversal") {
-  try {
-    const payload = {
-      reason,
-      confirmReverse: true,
-    };
+      const response = await api.post(`${BASE_URL}/transactions/${transactionId}/reverse`, payload);
 
-    const response = await api.post(`${BASE_URL}/transactions/${transactionId}/reverse`, payload);
+      // FIXED: Backend return { success: true, data: {...} }
+      if (!response.success) {
+        console.warn("⚠️ [reverseTransaction] Response tidak success:", response);
+        throw new Error(response.message || "Reversal failed");
+      }
 
-    console.log("🔍 [reverseTransaction] Full response:", response);
-    
-    // FIXED: Backend return { success: true, data: {...} }
-    if (!response.success) {
-      console.warn("⚠️ [reverseTransaction] Response tidak success:", response);
-      throw new Error(response.message || "Reversal failed");
+      // Return response.data yang berisi { originalTransaction, reversalTransaction }
+      return response.data;
+    } catch (error) {
+      console.error("Service Error - reverseTransaction:", error);
+      throw new Error(error.message || "Failed to reverse transaction");
     }
-
-    // Return response.data yang berisi { originalTransaction, reversalTransaction }
-    return response.data;
-  } catch (error) {
-    console.error("Service Error - reverseTransaction:", error);
-    throw new Error(error.message || "Failed to reverse transaction");
-  }
-},
+  },
 };

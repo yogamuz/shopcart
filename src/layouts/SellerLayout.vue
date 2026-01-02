@@ -97,11 +97,11 @@ const toggleSidebar = () => {
 };
 
 const handleGlobalSearch = (query) => {
-  console.log("Global search:", query);
+  ;
 };
 
 const handleGlobalSearchClear = () => {
-  console.log("Clear search");
+  ;
 };
 
 const handleOrdersCountUpdated = (count) => {

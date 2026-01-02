@@ -169,9 +169,7 @@ const debouncedFetchSuggestions = debounce(async query => {
 watch(
   suggestions,
   newSuggestions => {
-    console.log("🔍 Suggestions updated:", newSuggestions);
     if (newSuggestions.sellers && newSuggestions.sellers.length > 0) {
-      console.log("👥 Sellers data:", newSuggestions.sellers);
       newSuggestions.sellers.forEach((seller, index) => {
         console.log(`Seller ${index}:`, {
           name: seller.storeName,

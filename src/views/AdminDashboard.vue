@@ -84,7 +84,6 @@ const toggleSidebar = () => {
 
 const handleNavClick = navName => {
   try {
-    console.log("Navigating to:", navName);
 
     // Prevent self-assignment if already on the same page
     if (activeNav.value === navName) {

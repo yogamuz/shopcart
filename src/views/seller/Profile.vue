@@ -1050,7 +1050,6 @@ const unwatchUser = watch(
       clearProfile();
 
       if (newUserId) {
-        console.log("🔄 Fetching profile for new user:", newUserId);
         await fetchProfile(true); // ✅ PERBAIKAN: Await
       }
     }

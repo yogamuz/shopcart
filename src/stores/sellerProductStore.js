@@ -276,12 +276,12 @@ export const useSellerProductStore = defineStore("sellerProduct", () => {
       clearError();
 
       // ✅ NO AUTH CHECK - Let interceptor handle it
-      console.log("📊 Fetching dashboard stats with period:", period);
+      ;
 
       const response = await sellerProductService.getDashboardStats(period);
 
       if (response.success && response.data) {
-        console.log("✅ Dashboard stats received");
+        ;
 
         dashboardStats.value = {
           ...response.data,

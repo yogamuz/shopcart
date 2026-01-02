@@ -2,36 +2,18 @@
 <template>
   <div class="space-y-4 lg:space-y-6">
     <!-- Products Header -->
-    <div
-      class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6"
-    >
-      <div
-        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
+    <div class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 class="text-xl lg:text-2xl font-bold text-gray-900">
-            Product Management
-          </h2>
-          <p class="text-sm text-gray-600 mt-1">
-            Manage your product inventory and listings
-          </p>
+          <h2 class="text-xl lg:text-2xl font-bold text-gray-900">Product Management</h2>
+          <p class="text-sm text-gray-600 mt-1">Manage your product inventory and listings</p>
         </div>
         <button
           @click="showCreateForm = true"
           class="px-4 lg:px-6 py-2 lg:py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center"
         >
-          <svg
-            class="w-5 h-5 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Add New Product
         </button>
@@ -39,31 +21,18 @@
     </div>
 
     <!-- Loading State -->
-    <div
-      v-if="isLoading"
-      class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-8"
-    >
+    <div v-if="isLoading" class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-8">
       <div class="flex items-center justify-center">
-        <div
-          class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
-        ></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span class="ml-3 text-gray-600">Loading products...</span>
       </div>
     </div>
 
     <!-- Error State -->
-    <div
-      v-else-if="error"
-      class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-8"
-    >
+    <div v-else-if="error" class="bg-white rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 p-8">
       <div class="text-center">
         <div class="text-red-600 mb-4">
-          <svg
-            class="w-12 h-12 mx-auto"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -72,9 +41,7 @@
             />
           </svg>
         </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">
-          Error Loading Products
-        </h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Error Loading Products</h3>
         <p class="text-gray-600 mb-4">{{ error }}</p>
         <button
           @click="fetchProducts"
@@ -110,13 +77,13 @@
       @cancel="closeCreateForm"
     />
 
-<!-- Ganti SuccessModal yang lama dengan ini -->
-<SuccessModal
-  v-if="showSuccessModal"
-  :title="successModal.title"
-  :description="successModal.description"
-  @close="showSuccessModal = false"
-/>
+    <!-- Ganti SuccessModal yang lama dengan ini -->
+    <SuccessModal
+      v-if="showSuccessModal"
+      :title="successModal.title"
+      :description="successModal.description"
+      @close="showSuccessModal = false"
+    />
     <BulkDeleteModal
       v-if="showBulkDeleteModal"
       :product-count="bulkDeleteProductIds.length"
@@ -250,7 +217,6 @@ const handleSearch = async (searchQuery, category = null) => {
     params.category = selectedCategory.value;
   }
 
-  console.log("Search params:", params, "selectedCategory:", selectedCategory.value);
   await fetchProducts(params);
 };
 
@@ -283,7 +249,9 @@ const confirmBulkDelete = async () => {
     await bulkDeleteProducts(bulkDeleteProductIds.value);
 
     successModal.title = "Products Deleted Successfully!";
-    successModal.description = `Successfully deleted ${productCount} product${productCount > 1 ? "s" : ""} from your inventory.`;
+    successModal.description = `Successfully deleted ${productCount} product${
+      productCount > 1 ? "s" : ""
+    } from your inventory.`;
 
     setTimeout(() => {
       showSuccessModal.value = true;
@@ -303,8 +271,6 @@ const closeBulkDeleteModal = () => {
 
 // ✅ FIX: Always fetch on mount
 onMounted(async () => {
-  console.log("🎬 Products page mounted, fetching products...");
   await fetchProducts();
-  console.log("✅ Products fetched:", products.value.length);
 });
 </script>

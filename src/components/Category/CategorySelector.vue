@@ -186,7 +186,6 @@ const handleCategorySelect = async (categoryValue) => {
   const previousCategory = selectedCategory.value;
   selectedCategory.value = categoryValue;
   
-  console.log('Category filter selected:', categoryValue);
   
   try {
     // Emit the selection immediately for UI feedback
@@ -248,7 +247,6 @@ const loadCategories = async () => {
       });
       
       const categoryCount = categories?.value?.length || activeCategories?.value?.length || 0;
-      console.log(`✅ Loaded ${categoryCount} categories for filter selector`);
     } else {
       console.warn('getCategories function not available');
     }

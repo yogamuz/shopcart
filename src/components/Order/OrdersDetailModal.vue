@@ -609,7 +609,7 @@
               <button
                 v-if="hasAnyDeliverableItems"
                 @click="
-                  console.log('🔵 Confirm All button clicked');
+                  ;
                   handleConfirmAllDelivered();
                 "
                 class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -886,7 +886,7 @@ const handleConfirmAllDelivered = () => {
     return;
   }
 
-  console.log("🔍 Confirming all delivered items:", deliveredProductIds);
+  ;
 
   // Send specific productIds instead of empty object
   emit("confirm-delivery", orderWithCancelStatus.value.id, {
@@ -965,7 +965,7 @@ const confirmSingleProduct = async item => {
       feedbackData.review = reviewData.review.trim();
     }
 
-    console.log("📝 Confirming product with review:", feedbackData);
+    ;
 
     emit("confirm-delivery", orderWithCancelStatus.value.id, feedbackData);
 
@@ -982,9 +982,9 @@ watch(
   () => props.order,
   newOrder => {
     if (newOrder?.parcels) {
-      console.log("📦 CHECKING REVIEWS:");
+      ;
       newOrder.parcels.forEach((parcel, idx) => {
-        console.log(`Parcel ${idx}:`, parcel.parcelId);
+        ;
         parcel.items.forEach(item => {
           console.log(`  - ${item.productName}:`, {
             status: item.status,
@@ -1137,7 +1137,7 @@ const hasAnyDeliverableItems = computed(() => {
         }
       });
     });
-    console.log("📦 Deliverable items found:", deliveredItems);
+    ;
   }
 
   return hasDelivered;

@@ -343,14 +343,12 @@ const handleLogin = async () => {
     formLoading.value = true;
     clearMessages();
 
-    console.log("🔐 Attempting login...");
 
     await authStore.login({
       email: loginForm.value.email.trim(),
       password: loginForm.value.password,
     });
 
-    console.log("✅ Login successful");
 
     formSuccess.value = "Login successful! Welcome back.";
 
@@ -391,7 +389,6 @@ const handleRegister = async () => {
     formLoading.value = true;
     clearMessages();
 
-    console.log("📝 Attempting registration...");
 
     const userData = {
       username: registerForm.value.username.trim(),
@@ -401,7 +398,6 @@ const handleRegister = async () => {
 
     await authStore.register(userData);
 
-    console.log("✅ Registration successful");
 
     formSuccess.value = "Account created successfully! You are now logged in.";
 

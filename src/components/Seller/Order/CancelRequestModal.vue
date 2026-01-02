@@ -277,7 +277,7 @@ const handleApproveRequest = async request => {
     // Fetch full order details
     const response = await getRequestDetails(request.cancelRequestId);
 
-    console.log("getRequestDetails response:", response);
+    ;
 
     // Handle response structure - response bisa { success, data, message } atau langsung data
     const detailData = response?.data || response;
@@ -289,7 +289,7 @@ const handleApproveRequest = async request => {
     }
 
     const items = detailData.yourItems;
-    console.log("Items found:", items);
+    ;
 
     if (items.length === 0) {
       alert("No items found in this cancel request");
@@ -303,7 +303,7 @@ const handleApproveRequest = async request => {
       responseReason: reason || "",
     }));
 
-    console.log("Sending itemResponses:", itemResponses);
+    ;
 
     await respondToCancelRequest(request.cancelRequestId, itemResponses);
 
@@ -341,7 +341,7 @@ const handleRejectRequest = async request => {
     // Fetch full order details
     const response = await getRequestDetails(request.cancelRequestId);
 
-    console.log("getRequestDetails response:", response);
+    ;
 
     // Handle response structure - response bisa { success, data, message } atau langsung data
     const detailData = response?.data || response;
@@ -353,7 +353,7 @@ const handleRejectRequest = async request => {
     }
 
     const items = detailData.yourItems;
-    console.log("Items found:", items);
+    ;
 
     if (items.length === 0) {
       alert("No items found in this cancel request");
@@ -367,7 +367,7 @@ const handleRejectRequest = async request => {
       responseReason: reason,
     }));
 
-    console.log("Sending itemResponses:", itemResponses);
+    ;
 
     await respondToCancelRequest(request.cancelRequestId, itemResponses);
 

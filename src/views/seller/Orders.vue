@@ -1,7 +1,6 @@
 <!-- SellerOrder.vue - Clean Order Management Component -->
 <template>
   <div class="orders-content">
-
     <!-- Control Panel with Cancel Request Button -->
     <ControlPanel
       v-model:dateRange="dateRange"
@@ -120,7 +119,7 @@ const showCancelRequestModal = ref(false);
 
 // Computed properties
 const cancelRequestCount = computed(() => {
-  return orders.value.filter((order) => hasOrderCancelRequest(order.id)).length;
+  return orders.value.filter(order => hasOrderCancelRequest(order.id)).length;
 });
 
 // Watch for filter changes and apply them
@@ -139,7 +138,7 @@ watch(sortBy, () => {
 });
 
 // Watch for search query changes
-watch(searchQuery, (newQuery) => {
+watch(searchQuery, newQuery => {
   if (newQuery) {
     performSmartSearch(newQuery);
   } else {
@@ -153,7 +152,7 @@ watch(searchQuery, (newQuery) => {
 });
 
 // Methods
-  const applyFilters = () => {
+const applyFilters = () => {
   // Update composable filters
   setFilters({
     status: filters.value.status,
@@ -184,7 +183,7 @@ const closeAllModals = () => {
   showCancelRequestModal.value = false;
 };
 
-const openOrderModal = (order) => {
+const openOrderModal = order => {
   if (order) {
     selectedOrder.value = order;
   }
@@ -203,8 +202,8 @@ const closeCancelRequestModal = () => {
   showCancelRequestModal.value = false;
 };
 
-const handleViewOrderFromCancelRequest = (request) => {
-  const order = orders.value.find((o) => o.id === request.orderId);
+const handleViewOrderFromCancelRequest = request => {
+  const order = orders.value.find(o => o.id === request.orderId);
   if (order) {
     closeCancelRequestModal();
     openOrderModal(order);
@@ -212,7 +211,7 @@ const handleViewOrderFromCancelRequest = (request) => {
 };
 
 // Ship Order Modal Management
-const handleShipOrder = (order) => {
+const handleShipOrder = order => {
   selectedOrderForShip.value = order;
   showShipModal.value = true;
   selectedOrder.value = null;
@@ -223,7 +222,7 @@ const closeShipModal = () => {
   selectedOrderForShip.value = null;
 };
 
-const confirmShipOrder = async (shippingDetails) => {
+const confirmShipOrder = async shippingDetails => {
   try {
     await shipOrder(selectedOrderForShip.value.id, shippingDetails);
     closeShipModal();
@@ -235,51 +234,44 @@ const confirmShipOrder = async (shippingDetails) => {
 
 // Export CSV Handler
 const handleExportCSV = () => {
-  console.log("Exporting CSV with current filters:", filters.value);
   alert("CSV export functionality will be implemented");
 };
 
 // Action Handlers
-const handleApproveCancel = async (order) => {
+const handleApproveCancel = async order => {
   await handleApproveCancelFromModal(order);
 };
 
-const handleRejectCancel = async (order) => {
+const handleRejectCancel = async order => {
   await handleRejectCancelFromModal(order);
 };
 
-const handleTrackOrder = (order) => {
-  console.log("Tracking order:", order.id);
-};
+const handleTrackOrder = order => {};
 
-const handleCancelRequestApproved = async (order) => {
+const handleCancelRequestApproved = async order => {
   try {
-    console.log("Cancel request approved for order:", order.id);
   } catch (error) {
     console.error("Error handling cancel request approval:", error);
   }
 };
 
-const handleCancelRequestRejected = async (order) => {
+const handleCancelRequestRejected = async order => {
   try {
-    console.log("Cancel request rejected for order:", order.id);
   } catch (error) {
     console.error("Error handling cancel request rejection:", error);
   }
 };
 
-const handleApproveCancelFromModal = async (order) => {
+const handleApproveCancelFromModal = async order => {
   try {
-    console.log("Approving cancellation for order from modal:", order.id);
     closeOrderModal();
   } catch (err) {
     console.error("Error approving cancellation from modal:", err);
   }
 };
 
-const handleRejectCancelFromModal = async (order) => {
+const handleRejectCancelFromModal = async order => {
   try {
-    console.log("Rejecting cancellation for order from modal:", order.id);
     closeOrderModal();
   } catch (err) {
     console.error("Error rejecting cancellation from modal:", err);
@@ -287,7 +279,7 @@ const handleRejectCancelFromModal = async (order) => {
 };
 
 // Method untuk handle search dari global header
-const handleSearch = (query) => {
+const handleSearch = query => {
   searchQuery.value = query;
 };
 

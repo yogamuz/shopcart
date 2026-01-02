@@ -73,14 +73,11 @@ export const useApiClient = (token = null) => {
 
         // ✅ FIX: Check if token near expiry BEFORE making request
         if (authStore.accessToken && authStore.isTokenNearExpiry()) {
-          console.log("⚠️ Token near expiry - preemptive refresh");
-
           const refreshed = await authStore.refreshToken();
 
           if (!refreshed) {
             console.warn("❌ Preemptive refresh failed - using old token");
           } else {
-            console.log("✅ Preemptive refresh successful");
           }
         }
 
@@ -146,7 +143,6 @@ export const useApiClient = (token = null) => {
         // ✅ FIX: Only refresh if backend explicitly says so
         if (needsRefresh) {
           if (isRefreshing) {
-            console.log("⏳ Refresh in progress - queuing request");
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject });
             })

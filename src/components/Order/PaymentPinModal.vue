@@ -264,34 +264,34 @@ const validatePayment = async () => {
     balanceError.value = "";
     error.value = "";
 
-    console.log("🔍 Validating payment for amount:", props.order.totalAmount || props.order.total);
+    ;
 
     // Check sufficient balance first
     const balanceCheck = await checkSufficientBalance(props.order.totalAmount || props.order.total);
 
-    console.log("🔍 Balance check result:", balanceCheck);
+    ;
 
     if (!balanceCheck.success) {
-      console.log("❌ Insufficient balance:", balanceCheck.error);
+      ;
       balanceError.value = balanceCheck.error || "Insufficient balance for this transaction";
       return false;
     }
 
     // Log before order validation
-    console.log("🔍 Validating order:", props.order.id || props.order.orderNumber);
+    ;
 
     // Validate order payment
     const validation = await validateOrderPayment(props.order.id || props.order.orderNumber);
 
-    console.log("🔍 Order validation result:", validation);
+    ;
 
     if (!validation.success) {
-      console.log("❌ Order validation failed:", validation.error);
+      ;
       error.value = validation.error || "Order validation failed";
       return false;
     }
 
-    console.log("✅ Payment validation successful");
+    ;
     return true;
   } catch (err) {
     console.error("❌ Payment validation error:", err);

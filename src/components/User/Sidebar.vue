@@ -84,11 +84,7 @@
           class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <!-- ✅ PERBAIKAN: Icon statis, tidak berputar -->
-          <component
-            :is="LogOut"
-            class="w-5 h-5 flex-shrink-0"
-            :class="collapsed ? '' : 'mr-3'"
-          />
+          <component :is="LogOut" class="w-5 h-5 flex-shrink-0" :class="collapsed ? '' : 'mr-3'" />
           <span v-if="!collapsed">{{ isLoggingOut ? "Logging out..." : "Logout" }}</span>
         </button>
       </div>
@@ -154,7 +150,7 @@ const navItems = ref([
 ]);
 
 // ✅ Check if route is active
-const isActive = (navName) => {
+const isActive = navName => {
   return props.activeNav === navName;
 };
 
@@ -177,18 +173,15 @@ const handleLogout = async () => {
       const { useUserProfileStore } = await import("@/stores/userProfileStore");
       const userProfileStore = useUserProfileStore();
       userProfileStore.$reset();
-      console.log("✅ User data cleared on logout");
     } catch (err) {
       console.warn("Failed to clear user data:", err);
     }
 
     // ✅ Logout tanpa explicit router.push
     await logout();
-    
+
     // ✅ TAMBAHKAN: Explicit redirect ke homepage (sama seperti seller)
     await router.push("/");
-    
-    console.log("✅ User logged out successfully");
   } catch (error) {
     console.error("❌ Logout error:", error);
   } finally {

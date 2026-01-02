@@ -577,9 +577,9 @@ const fetchOrderProductReviews = async () => {
 
     if (response.success && response.data.reviews) {
       // ✅ DEBUG: Check item structure first
-      console.log("=== Order Items Structure ===");
-      console.log("First item:", props.order.items[0]);
-      console.log("All items:", props.order.items);
+      ;
+      ;
+      ;
 
       // ✅ Extract actual product IDs from order items
       const orderProductIds = props.order.items
@@ -595,10 +595,10 @@ const fetchOrderProductReviews = async () => {
         })
         .filter(Boolean);
 
-      console.log("=== Review Filtering Debug ===");
-      console.log("Order product IDs:", orderProductIds);
-      console.log("Customer username:", props.order.customer.username);
-      console.log("Total reviews fetched:", response.data.reviews.length);
+      ;
+      ;
+      ;
+      ;
 
       // ✅ Filter reviews by product ID AND customer username
       orderProductReviews.value = response.data.reviews
@@ -629,8 +629,8 @@ const fetchOrderProductReviews = async () => {
           createdAt: review.createdAt,
         }));
 
-      console.log("Filtered reviews count:", orderProductReviews.value.length);
-      console.log("Filtered reviews:", orderProductReviews.value);
+      ;
+      ;
     }
   } catch (error) {
     console.error("Failed to fetch reviews:", error);
@@ -696,11 +696,7 @@ const handleTrackOrder = () => {
 };
 
 onMounted(() => {
-  console.log("=== OrderModal Mounted ===");
-  console.log("Order:", props.order);
-  console.log("Order items:", props.order?.items);
-  console.log("Customer:", props.order?.customer);
-  console.log("Has feedback:", props.order?.sellerInfo?.customerFeedback);
+  
 
   fetchOrderProductReviews();
 });

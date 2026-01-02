@@ -20,7 +20,6 @@ export const setupRouterGuards = router => {
 
     // ✅ CRITICAL: Wait for auth initialization FIRST
     if (!authStore.isInitialized) {
-      console.log("🔄 Waiting for auth initialization...");
       await authStore.initialize();
     }
 
@@ -83,7 +82,6 @@ export const setupRouterGuards = router => {
 
           // Force fetch jika belum ada data
           if (!userProfileStore.profile) {
-            console.log("🔄 Auto-fetching user profile on dashboard entry...");
             await userProfileStore.fetchProfile(true);
           }
         } catch (err) {

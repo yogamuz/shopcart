@@ -492,19 +492,15 @@ const loadDashboardData = async () => {
 // ✅ Lifecycle - Fixed onUnmounted
 // ✅ Lifecycle - Optimized with cache
 onMounted(async () => {
-  console.log("🏠 Dashboard mounted, loading data...");
-  
   // ✅ Fetch profile & addresses HANYA jika belum ada (gunakan cache)
   if (!userProfileStore.profile) {
-    console.log("🔄 Fetching profile...");
     await userProfileStore.fetchProfile(false); // ✅ false = use cache
   }
-  
+
   if (userProfileStore.addresses.length === 0) {
-    console.log("🔄 Fetching addresses...");
     await userProfileStore.fetchAddresses(false); // ✅ false = use cache
   }
-  
+
   // Load wallet & orders
   await loadDashboardData();
   startAutoRefresh(30000);

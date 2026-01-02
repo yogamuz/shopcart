@@ -57,14 +57,14 @@ export const useWallet = () => {
 const checkSufficientBalance = async (amount, options = {}) => {
   const { showError = true } = options
 
-  console.log('🔍 Checking balance for amount:', amount)
+  
   
   try {
     const result = await walletStore.checkBalance(amount)
     
-    console.log('🔍 Check balance result:', result)
-    console.log('🔍 Result success:', result.success)
-    console.log('🔍 Result error:', result.error)
+    
+    
+    
     
     if (!result.success && showError) {
       console.warn('❌ Insufficient balance:', result.error)
