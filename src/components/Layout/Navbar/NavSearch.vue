@@ -170,14 +170,7 @@ watch(
   suggestions,
   newSuggestions => {
     if (newSuggestions.sellers && newSuggestions.sellers.length > 0) {
-      newSuggestions.sellers.forEach((seller, index) => {
-        console.log(`Seller ${index}:`, {
-          name: seller.storeName,
-          slug: seller.storeSlug,
-          logo: seller.logo,
-          logoUrl: seller.logo?.url,
-        });
-      });
+      newSuggestions.sellers.forEach((seller, index) => {});
     }
   },
   { deep: true }

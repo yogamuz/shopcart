@@ -89,11 +89,7 @@ export const useSearch = () => {
           sortBy: params.sortBy,
         };
 
-        console.log("✅ Search successful:", {
-          term: searchTerm,
-          results: searchResults.value.length,
-          total: pagination.value.totalItems,
-        });
+
 
         return { success: true, data: response.data };
       } else {
