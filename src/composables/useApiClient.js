@@ -1,4 +1,4 @@
-// composables/useApiClient.js - FIXED WITH AUTO REFRESH
+// composables/useApiClient.js - FIXED: Logout-safe version
 import { ref } from "vue";
 import axios from "axios";
 import { logger } from "@/utils/logger";
@@ -6,20 +6,25 @@ import { logger } from "@/utils/logger";
 const isLoading = ref(false);
 const error = ref(null);
 
+// ✅ CRITICAL: Global logout flag to prevent interceptor interference
+let isLoggingOut = false;
+
+export const setLoggingOut = (value) => {
+  isLoggingOut = value;
+};
+
 export const useApiClient = (token = null) => {
   const baseURL = import.meta.env.VITE_API_URL;
 
-  // Create axios instance
   const apiClient = axios.create({
     baseURL,
     timeout: 10000,
-    withCredentials: true, // Important for HTTP-only cookies
+    withCredentials: true,
     headers: {
       "Content-Type": "application/json",
     },
   });
 
-  // Track if we're currently refreshing to avoid multiple refresh calls
   let isRefreshing = false;
   let failedQueue = [];
 
@@ -31,38 +36,34 @@ export const useApiClient = (token = null) => {
         prom.resolve(token);
       }
     });
-
     failedQueue = [];
   };
 
-  /**
-   * Helper: Better network error detection
-   * Membedakan antara network error vs auth error
-   */
   const isNetworkError = error => {
-    if (!error.response) return true; // No response = network error
-    if (error.code === "ECONNABORTED") return true; // Timeout
-    if (error.code === "ENOTFOUND") return true; // DNS error
+    if (!error.response) return true;
+    if (error.code === "ECONNABORTED") return true;
+    if (error.code === "ENOTFOUND") return true;
     return false;
   };
 
-  /**
-   * Helper: Check if refresh should be retried
-   * Don't refresh jika network truly down
-   */
-  const shouldAttemptRefresh = error => {
-    if (isNetworkError(error)) return false; // Network error, jangan retry
-    if (error.response?.status === 401) return true; // Auth error, coba refresh
-    if (error.response?.status === 403) return false; // Permission error, jangan retry
-    return false;
-  };
-
+  // ============================================================================
+  // REQUEST INTERCEPTOR
+  // ============================================================================
   apiClient.interceptors.request.use(
     async config => {
+      // ✅ CRITICAL: Skip token injection if logging out
+      if (isLoggingOut) {
+        logger.warn("🚫 Request blocked: Logout in progress");
+        // Return rejected promise to cancel request
+        return Promise.reject({
+          message: "Request cancelled: Logout in progress",
+          isLogoutCancellation: true,
+        });
+      }
+
       isLoading.value = true;
       error.value = null;
 
-      // Skip jika retry request
       if (config._isRetry && config.headers.Authorization) {
         return config;
       }
@@ -71,13 +72,19 @@ export const useApiClient = (token = null) => {
         const { useAuthStore } = await import("@/stores/authStore");
         const authStore = useAuthStore();
 
-        // ✅ FIX: Check if token near expiry BEFORE making request
+        // ✅ Check again after async import
+        if (isLoggingOut) {
+          return Promise.reject({
+            message: "Request cancelled: Logout in progress",
+            isLogoutCancellation: true,
+          });
+        }
+
+        // Preemptive refresh if near expiry
         if (authStore.accessToken && authStore.isTokenNearExpiry()) {
           const refreshed = await authStore.refreshToken();
-
           if (!refreshed) {
-            console.warn("❌ Preemptive refresh failed - using old token");
-          } else {
+            logger.warn("❌ Preemptive refresh failed - using old token");
           }
         }
 
@@ -85,8 +92,6 @@ export const useApiClient = (token = null) => {
 
         if (currentToken) {
           config.headers.Authorization = `Bearer ${currentToken}`;
-          // ✅ Jangan log untuk setiap request, terlalu noise
-          // logger.tokenSet(config.url);
         } else {
           logger.tokenMissing(config.url);
         }
@@ -105,6 +110,9 @@ export const useApiClient = (token = null) => {
     }
   );
 
+  // ============================================================================
+  // RESPONSE INTERCEPTOR
+  // ============================================================================
   apiClient.interceptors.response.use(
     response => {
       isLoading.value = false;
@@ -114,15 +122,32 @@ export const useApiClient = (token = null) => {
       const originalRequest = error.config;
       isLoading.value = false;
 
+      // ✅ CRITICAL: Silently reject if logout is in progress
+      if (isLoggingOut) {
+        logger.warn("🚫 Response interceptor skipped: Logout in progress");
+        return Promise.reject({
+          message: "Response handling cancelled: Logout in progress",
+          isLogoutCancellation: true,
+          status: 0,
+        });
+      }
+
+      // ✅ CRITICAL: Handle logout cancellations gracefully
+      if (error.isLogoutCancellation) {
+        return Promise.reject(error);
+      }
+
       const isRefreshRequest = originalRequest.url?.includes("/refresh");
       const isVerifyRequest = originalRequest.url?.includes("/verify");
-      const isNetworkError = !error.response || error.code === "ECONNABORTED";
+      const isNetworkErr = !error.response || error.code === "ECONNABORTED";
 
-      // ✅ FIX: 401 handler dengan better error detection
+      // ============================================================================
+      // 401 HANDLER
+      // ============================================================================
       if (error.response?.status === 401 && !originalRequest._retry) {
         const needsRefresh = error.response?.data?.needsRefresh;
 
-        // ✅ FIX: Detect network error lebih baik
+        // Network error check
         const isNetworkError =
           !error.response ||
           error.code === "ECONNABORTED" ||
@@ -140,8 +165,16 @@ export const useApiClient = (token = null) => {
           return Promise.reject(apiError);
         }
 
-        // ✅ FIX: Only refresh if backend explicitly says so
+        // Only refresh if backend explicitly says so
         if (needsRefresh) {
+          // ✅ Check logout flag again before queuing
+          if (isLoggingOut) {
+            return Promise.reject({
+              message: "Refresh cancelled: Logout in progress",
+              isLogoutCancellation: true,
+            });
+          }
+
           if (isRefreshing) {
             return new Promise((resolve, reject) => {
               failedQueue.push({ resolve, reject });
@@ -159,6 +192,15 @@ export const useApiClient = (token = null) => {
           try {
             const { useAuthStore } = await import("@/stores/authStore");
             const authStore = useAuthStore();
+
+            // ✅ Final check before refresh
+            if (isLoggingOut) {
+              processQueue(new Error("Refresh cancelled: Logout in progress"), null);
+              return Promise.reject({
+                message: "Refresh cancelled: Logout in progress",
+                isLogoutCancellation: true,
+              });
+            }
 
             logger.tokenRefresh("Refreshing token...");
             const refreshed = await authStore.refreshToken();
@@ -179,13 +221,12 @@ export const useApiClient = (token = null) => {
               logger.tokenRefreshFailed("Token refresh returned false");
               processQueue(new Error("Refresh failed"), null);
 
-              // ✅ FIX: Jangan logout jika network error
-              if (!error.isNetworkError) {
+              // ✅ FIXED: Only logout if NOT already logging out
+              if (!isLoggingOut && !error.isNetworkError) {
                 await authStore.logout();
 
-                if (typeof window !== "undefined" && window.$router) {
-                  window.$router.push("/login");
-                }
+                // ✅ FIXED: Don't redirect to /login - let authStore.logout() handle it
+                // The logout() function already redirects to "/" via router
               }
 
               return Promise.reject(error);
@@ -194,11 +235,13 @@ export const useApiClient = (token = null) => {
             logger.tokenRefreshFailed(refreshError);
             processQueue(refreshError, null);
 
-            // ✅ FIX: Check if network error before logout
             const isRefreshNetworkError =
-              !refreshError.status || refreshError.code === "ECONNABORTED" || refreshError.code === "ERR_NETWORK";
+              !refreshError.status || 
+              refreshError.code === "ECONNABORTED" || 
+              refreshError.code === "ERR_NETWORK";
 
-            if (!isRefreshNetworkError) {
+            // ✅ FIXED: Only logout if NOT already logging out
+            if (!isLoggingOut && !isRefreshNetworkError) {
               try {
                 const { useAuthStore } = await import("@/stores/authStore");
                 await useAuthStore().logout();
@@ -212,28 +255,27 @@ export const useApiClient = (token = null) => {
             isRefreshing = false;
           }
         } else {
-          // ✅ FIX: 401 tanpa needsRefresh - tapi check network dulu
-          if (!isNetworkError) {
+          // 401 without needsRefresh
+          // ✅ FIXED: Only logout if NOT already logging out
+          if (!isLoggingOut && !isNetworkErr) {
             const { useAuthStore } = await import("@/stores/authStore");
             await useAuthStore().logout();
-
-            if (typeof window !== "undefined" && window.$router) {
-              window.$router.push("/login");
-            }
           }
 
           return Promise.reject(error);
         }
       }
 
-      // Standard error formatting (unchanged)
+      // ============================================================================
+      // STANDARD ERROR FORMATTING
+      // ============================================================================
       const apiError = {
         status: error.response?.status || 0,
         message: error.response?.data?.message || error.message || "Request failed",
         errors: error.response?.data?.errors || [],
         data: error.response?.data || null,
         code: error.code,
-        isNetworkError: isNetworkError,
+        isNetworkError: isNetworkErr,
       };
 
       // Status-specific messages
@@ -260,7 +302,7 @@ export const useApiClient = (token = null) => {
           apiError.message = "Server error. Try again.";
           break;
         default:
-          if (isNetworkError) {
+          if (isNetworkErr) {
             apiError.message = "Network error. Check connection.";
           }
       }
@@ -270,7 +312,9 @@ export const useApiClient = (token = null) => {
     }
   );
 
-  // HTTP Methods (unchanged)
+  // ============================================================================
+  // HTTP METHODS
+  // ============================================================================
   const get = async (url, config = {}) => {
     try {
       return await apiClient.get(url, config);
@@ -311,7 +355,9 @@ export const useApiClient = (token = null) => {
     }
   };
 
-  // Utility methods
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
   const setAuthToken = newToken => {
     if (newToken) {
       apiClient.defaults.headers.Authorization = `Bearer ${newToken}`;
@@ -323,18 +369,7 @@ export const useApiClient = (token = null) => {
   const clearError = () => {
     error.value = null;
   };
-  const getWithDebug = async (url, config = {}) => {
-    logger.apiRequest(url, config); // ← GANTI console.log
 
-    try {
-      const response = await apiClient.get(url, config);
-      logger.apiSuccess(url, response); // ← GANTI console.log
-      return response;
-    } catch (err) {
-      logger.apiError(url, err); // ← GANTI console.error
-      throw err;
-    }
-  };
   const clearAuth = () => {
     delete apiClient.defaults.headers.Authorization;
   };
@@ -342,20 +377,18 @@ export const useApiClient = (token = null) => {
   const uploadFile = async (url, file, config = {}) => {
     const formData = new FormData();
 
-    // Determine field name based on URL patterns
-    let fieldName = "file"; // default
+    let fieldName = "file";
 
     if (url.includes("/image")) {
-      fieldName = "image"; // for product uploads
+      fieldName = "image";
     } else if (url.includes("/avatar")) {
-      fieldName = "avatar"; // for profile uploads
+      fieldName = "avatar";
     } else if (url.includes("/logo")) {
-      fieldName = "logo"; // for seller profile logo
+      fieldName = "logo";
     } else if (url.includes("/banner")) {
-      fieldName = "banner"; // for seller profile banner
+      fieldName = "banner";
     }
 
-    // Allow override via config
     if (config.fieldName) {
       fieldName = config.fieldName;
     }
@@ -379,24 +412,17 @@ export const useApiClient = (token = null) => {
   };
 
   return {
-    // State
     isLoading,
     error,
-
-    // HTTP Methods
     get,
     post,
     put,
     patch,
     delete: del,
-
-    // Utility methods
     setAuthToken,
     clearError,
     clearAuth,
     uploadFile,
-
-    // Direct access to axios instance if needed
     client: apiClient,
   };
 };

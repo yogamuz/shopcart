@@ -1,4 +1,3 @@
-<!-- components/Seller/Sidebar.vue -->
 <template>
   <!-- Mobile Overlay -->
   <div
@@ -100,9 +99,8 @@
         <button
           @click="handleLogout"
           :disabled="isLoggingOut"
-          class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full disabled:opacity-50"
+          class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <!-- ✅ PERBAIKAN: Hapus animate-spin -->
           <component :is="LogOut" class="w-5 h-5 flex-shrink-0" :class="collapsed ? '' : 'mr-3'" />
           <span v-if="!collapsed">{{ isLoggingOut ? "Logging out..." : "Logout" }}</span>
         </button>
@@ -151,18 +149,32 @@ const navItems = ref([
 
 const handleLogout = async () => {
   if (isLoggingOut.value) return;
+  
   try {
     isLoggingOut.value = true;
+    
+    // Clear seller profile first
     try {
       const { useSellerProfileStore } = await import("@/stores/sellerProfileStore");
       useSellerProfileStore().clearProfile();
     } catch (err) {
       console.warn("Failed to clear seller profile:", err);
     }
+    
+    // Logout from auth store
     await logout();
+    
+    // ✅ CRITICAL: Wait a bit before navigation to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Navigate to home
+    ("✅ Navigating to home");
     await router.push("/");
+    
   } catch (error) {
     console.error("Logout error:", error);
+    // Force navigation even on error
+    router.push("/");
   } finally {
     isLoggingOut.value = false;
   }
