@@ -131,47 +131,53 @@ export const useUserProfileStore = defineStore("userProfile", () => {
     loading.value = false;
   };
 
-const fetchProfile = async (forceRefresh = false) => {
-  // ✅ Guard: jangan fetch kalau sudah ada & tidak expired
-  if (!forceRefresh && profile.value && !loading.value) {
-    return { success: true, data: profile.value };
-  }
+  // ✅ PERBAIKAN UTAMA: Fungsi fetchProfile yang lebih robust
+  const fetchProfile = async (forceRefresh = false) => {
+    // ✅ PERBAIKAN 1: Cek apakah sedang loading untuk prevent duplicate requests
+    if (loading.value) {
+      console.log("⏳ Already fetching profile, waiting...");
+      return { success: false, message: "Loading in progress" };
+    }
 
-  // ✅ Guard: jangan fetch kalau sudah loading
-  if (loading.value && !forceRefresh) {
-    return;
-  }
-
-  try {
-    setLoading(true);
-    clearError();
-
-    const response = await userProfileService.getProfile();
-
-    if (response.success) {
-      profile.value = response.data.profile;
-
-      if (response.data.addresses?.list) {
-        addresses.value = response.data.addresses.list;
-      }
-
+    // ✅ PERBAIKAN 2: Skip jika ada data valid DAN tidak force refresh
+    if (!forceRefresh && profile.value !== null && Object.keys(profile.value).length > 0) {
+      console.log("📦 Using cached profile data");
       return { success: true, data: profile.value };
     }
-  } catch (err) {
-    console.error("❌ Error fetching profile:", err);
-    setError(err.message || "Failed to load profile");
 
-    if (err.status === 404 || err.message?.includes("not found")) {
-      profile.value = null;
-      addresses.value = [];
+    try {
+      console.log("🔄 Fetching profile from server...");
+      setLoading(true);
       clearError();
-    }
 
-    throw err;
-  } finally {
-    setLoading(false);
-  }
-};
+      const response = await userProfileService.getProfile();
+
+      if (response.success) {
+        // ✅ PERBAIKAN 3: Pastikan data benar-benar di-set
+        profile.value = response.data.profile;
+
+        if (response.data.addresses?.list) {
+          addresses.value = response.data.addresses.list;
+        }
+
+        console.log("✅ Profile loaded successfully:", profile.value);
+        return { success: true, data: profile.value };
+      }
+    } catch (err) {
+      console.error("❌ Error fetching profile:", err);
+      setError(err.message || "Failed to load profile");
+
+      if (err.status === 404 || err.message?.includes("not found")) {
+        profile.value = null;
+        addresses.value = [];
+        clearError();
+      }
+
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const createProfile = async (profileData) => {
     try {
@@ -336,7 +342,14 @@ const fetchProfile = async (forceRefresh = false) => {
   // ========== ADDRESS METHODS ==========
 
   const fetchAddresses = async (forceRefresh = false) => {
-    if (!forceRefresh && addresses.value.length > 0 && !loading.value) {
+    // ✅ PERBAIKAN: Cek loading state
+    if (loading.value) {
+      console.log("⏳ Already fetching addresses, waiting...");
+      return { success: false, message: "Loading in progress" };
+    }
+
+    if (!forceRefresh && addresses.value.length > 0) {
+      console.log("📦 Using cached addresses data");
       return { success: true, data: addresses.value };
     }
 
@@ -467,6 +480,13 @@ const fetchProfile = async (forceRefresh = false) => {
     }
   };
 
+  const clearCache = () => {
+    console.log("🗑️ Clearing profile cache");
+    profile.value = null;
+    addresses.value = [];
+    error.value = null;
+  };
+  
   const $reset = () => {
     profile.value = null;
     addresses.value = [];
@@ -503,6 +523,7 @@ const fetchProfile = async (forceRefresh = false) => {
     setLoading,
     setError,
     clearProfile,
+    clearCache,
     fetchProfile,
     createProfile,
     updateProfile,

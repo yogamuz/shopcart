@@ -309,9 +309,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { useAuth } from "@/composables/useAuth";
+import { useAuthStore } from "@/stores/authStore";
 
-const { changePassword: changePasswordAuth, isLoading } = useAuth();
+const { changePassword: changePasswordAuth, isLoading } = useAuthStore()
 
 const emit = defineEmits(["search"]);
 
@@ -484,6 +484,61 @@ const deleteAccount = () => {
 onMounted(() => {
   // Load settings data
   console.log("Loading settings data...");
+});
+onMounted(() => {
+  try {
+    const savedSettings = localStorage.getItem('userSettings');
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      
+      if (parsed.notifications) {
+        notifications.value = notifications.value.map(notif => ({
+          ...notif,
+          enabled: parsed.notifications[notif.key] ?? notif.enabled
+        }));
+      }
+      
+      if (parsed.privacy) {
+        privacy.value = { ...privacy.value, ...parsed.privacy };
+      }
+      
+      if (parsed.security) {
+        security.value = { ...security.value, ...parsed.security };
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load settings:", error);
+  }
+});
+onMounted(() => {
+  console.log("⚙️ Settings page mounted");
+  
+  try {
+    const savedSettings = localStorage.getItem('userSettings');
+    
+    if (savedSettings) {
+      const parsed = JSON.parse(savedSettings);
+      
+      if (parsed.notifications) {
+        notifications.value = notifications.value.map(notif => ({
+          ...notif,
+          enabled: parsed.notifications[notif.key] ?? notif.enabled
+        }));
+      }
+      
+      if (parsed.privacy) {
+        privacy.value = { ...privacy.value, ...parsed.privacy };
+      }
+      
+      if (parsed.security) {
+        security.value = { ...security.value, ...parsed.security };
+      }
+      
+      console.log("⚙️ Settings loaded successfully");
+    }
+  } catch (error) {
+    console.error("Failed to load settings:", error);
+  }
 });
 </script>
 

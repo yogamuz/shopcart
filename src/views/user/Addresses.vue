@@ -343,9 +343,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Home, Building2, MapPin } from "lucide-vue-next";
-import { useUserQueries } from "@/composables/useUserQueries";
 import { useUserProfileStore } from "@/stores/userProfileStore";
-import ConfirmModalProfile from "./ConfirmModalProfile.vue";
+import ConfirmModalProfile from "../../components/User/ConfirmModalProfile.vue";
 
 const props = defineProps({
   embedded: {
@@ -360,17 +359,11 @@ const props = defineProps({
 
 const emit = defineEmits(["search", "address-selected"]);
 
-// ✅ TanStack Query - HANYA fetch addresses
-const { useAddressesQuery, queryClient } = useUserQueries();
-const { data: addressesData, isLoading, error: queryError } = useAddressesQuery();
-
-// ✅ Profile Store - untuk mutations saja
 const profileStore = useUserProfileStore();
 
-// ✅ Computed dari query
-const addresses = computed(() => addressesData.value || []);
-const loading = computed(() => isLoading.value || profileStore.loading);
-const error = computed(() => queryError.value?.message || profileStore.error);
+const addresses = computed(() => profileStore.addresses);
+const loading = computed(() => profileStore.loading);
+const error = computed(() => profileStore.error);
 
 // Data kota-kota Jabodetabek
 const jabodetabekCities = ref([
@@ -601,26 +594,16 @@ const handleSaveAddress = async () => {
     
     if (isEditing.value) {
       result = await profileStore.updateAddress(editingIndex.value, addressForm.value);
-      
-      // ✅ Update cache langsung, no extra fetch
-      if (result.success) {
-        updateAddressCache(addressForm.value, editingIndex.value);
-      }
     } else {
       result = await profileStore.addAddress(addressForm.value);
-      
-      // ✅ Update cache langsung, no extra fetch
-      if (result.success) {
-        updateAddressCache(addressForm.value, null);
-      }
     }
 
-    closeModal();
-    
+    if (result.success) {
+      closeModal();
+      // ✅ Data sudah auto-update via store, tidak perlu queryClient
+    }
   } catch (err) {
     console.error("Failed to save address:", err);
-    // ✅ Jika error, baru fetch ulang
-    await queryClient.invalidateQueries({ queryKey: ["user", "addresses"] });
   }
 };
 
@@ -664,6 +647,16 @@ const handleDeleteAddress = (addressIndex) => {
   showDeleteConfirm.value = true;
   activeMenu.value = null;
 };
+
+onMounted(async () => {
+  if (!addresses.value || addresses.value.length === 0) {
+    try {
+      await profileStore.fetchAddresses(true);
+    } catch (error) {
+      console.error("Failed to fetch addresses on mount:", error);
+    }
+  }
+});
 
 const confirmDeleteAddress = async () => {
   if (addressToDelete.value === null) return;
@@ -717,6 +710,16 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
+});
+onMounted(async () => {
+  console.log("📍 Addresses page mounted");
+  
+  if (profileStore.addresses.length === 0) {
+    console.log("🔄 Fetching addresses...");
+    await profileStore.fetchAddresses(true);
+  } else {
+    console.log("📍 Addresses already loaded:", profileStore.addresses.length);
+  }
 });
 </script>
 <style scoped>

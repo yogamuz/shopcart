@@ -83,7 +83,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useUserProfile } from "@/composables/useUserProfile";
+import { useUserProfileStore } from "@/stores/userProfileStore";
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "vue-router";
 
@@ -98,7 +98,7 @@ const emit = defineEmits(["close", "success"]);
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { upgradeToSeller } = useUserProfile();
+const { upgradeToSeller } = useUserProfileStore();
 
 const isLoading = ref(false);
 const error = ref(null);

@@ -51,9 +51,9 @@
 </template>
 
 <script setup>
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import { useAuthStore } from "@/stores/authStore";
-import { useUserQueries } from "@/composables/useUserQueries";
+import { useUserProfileStore } from "@/stores/userProfileStore"; // ✅ GANTI: useUserQueries → useUserProfileStore
 
 // ✅ Props
 defineProps({
@@ -66,13 +66,12 @@ defineProps({
 // ✅ Emits
 const emit = defineEmits(["toggle-sidebar"]);
 
-// ✅ Setup stores & queries
+// ✅ Setup stores
 const authStore = useAuthStore();
-const { useProfileQuery, queryClient } = useUserQueries();
-const { data: profileData } = useProfileQuery();
+const userProfileStore = useUserProfileStore(); // ✅ GANTI: dari useUserQueries ke useUserProfileStore
 
-// ✅ Computed dari query langsung
-const profile = computed(() => profileData.value?.profile);
+// ✅ Computed dari store langsung
+const profile = computed(() => userProfileStore.profile); // ✅ GANTI: dari profileData.value?.profile ke userProfileStore.profile
 
 const profileAvatarUrl = computed(() => {
   if (profile.value?.avatar) {
@@ -100,17 +99,7 @@ const profileInitials = computed(() => {
   return `${first}${last}` || authStore.user?.username?.substring(0, 2).toUpperCase() || "U";
 });
 
-// ✅ Watch for user changes
-watch(
-  () => authStore.user?.id,
-  async (newUserId, oldUserId) => {
-    if (newUserId && newUserId !== oldUserId) {
-      console.log("🔄 User changed, invalidating profile cache");
-      await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
-    }
-  },
-  { immediate: false }
-);
+// ✅ HAPUS: watch untuk queryClient.invalidateQueries (tidak diperlukan lagi)
 </script>
 
 <style scoped>

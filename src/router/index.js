@@ -6,6 +6,7 @@ import { setupRouterGuards } from "@/utils/routerGuards";
 import DefaultLayout from "@/layouts/DefaultLayout.vue";
 import StandaloneLayout from "@/layouts/StandaloneLayout.vue";
 import SellerLayout from "@/layouts/SellerLayout.vue";
+import UserLayout from "@/layouts/UserLayout.vue"; // ✅ TAMBAHKAN
 
 const routes = [
   // ========================================
@@ -105,61 +106,109 @@ const routes = [
   },
 
   // ========================================
-  // ✅ SELLER LAYOUT (Proper SPA Structure)
+  // ✅ USER DASHBOARD LAYOUT (SPA Structure)
   // ========================================
   {
-    path: "/seller",
-    component: SellerLayout,
-    redirect: "/seller/dashboard",
+    path: "/",
+    component: UserLayout,
+    redirect: "/dashboard",
     meta: {
       requiresAuth: true,
-      role: "seller",
+      role: "user",
     },
     children: [
       {
         path: "dashboard",
-        name: "SellerDashboard",
-        component: () => import("@/views/seller/Dashboard.vue"),
+        name: "UserDashboard",
+        component: () => import("@/views/user/Dashboard.vue"),
         meta: { title: "Dashboard Overview" },
       },
       {
-        path: "products",
-        name: "SellerProducts",
-        component: () => import("@/views/seller/Products.vue"),
-        meta: { title: "Product Management" },
+        path: "dashboard/profile",
+        name: "UserProfile",
+        component: () => import("@/views/user/Profile.vue"),
+        meta: { title: "Profile Management" },
       },
       {
-        path: "orders",
-        name: "SellerOrders",
-        component: () => import("@/views/seller/Orders.vue"),
-        meta: { title: "Orders Dashboard" },
+        path: "dashboard/addresses",
+        name: "UserAddresses",
+        component: () => import("@/views/user/Addresses.vue"),
+        meta: { title: "Address Management" },
       },
       {
-        path: "analytics",
-        name: "SellerAnalytics",
-        component: () => import("@/views/seller/Analytics.vue"),
-        meta: { title: "Analytics & Reports" },
+        path: "dashboard/wallet",
+        name: "UserWallet",
+        component: () => import("@/views/user/Wallet.vue"),
+        meta: { title: "Wallet Management" },
       },
       {
-        path: "wallet",
-        name: "SellerWallet",
-        component: () => import("@/views/seller/Wallet.vue"),
-        meta: { title: "Seller Wallet" },
-      },
-      {
-        path: "profile",
-        name: "SellerProfile",
-        component: () => import("@/views/seller/Profile.vue"),
-        meta: { title: "Seller Profile" },
-      },
-      {
-        path: "settings",
-        name: "SellerSettings",
-        component: () => import("@/views/seller/Settings.vue"),
-        meta: { title: "Settings" },
+        path: "dashboard/settings",
+        name: "UserSettings",
+        component: () => import("@/views/user/Settings.vue"),
+        meta: { title: "Settings Management" },
       },
     ],
   },
+
+  // ========================================
+  // SELLER LAYOUT (Proper SPA Structure)
+  // ========================================
+  // ========================================
+  // SELLER LAYOUT (Proper SPA Structure)
+  // ========================================
+{
+  path: "/seller",
+  component: SellerLayout,
+  redirect: "/seller/dashboard",
+  meta: {
+    requiresAuth: true,
+    role: "seller",
+  },
+  children: [
+    {
+      path: "dashboard",  // ✅ /seller/dashboard
+      name: "SellerDashboard",
+      component: () => import("@/views/seller/Dashboard.vue"),
+      meta: { title: "Dashboard Overview" },
+    },
+    {
+      path: "dashboard/products",  // ✅ /seller/dashboard/products
+      name: "SellerProducts",
+      component: () => import("@/views/seller/Products.vue"),
+      meta: { title: "Product Management" },
+    },
+    {
+      path: "dashboard/orders",  // ✅ /seller/dashboard/orders
+      name: "SellerOrders",
+      component: () => import("@/views/seller/Orders.vue"),
+      meta: { title: "Orders Dashboard" },
+    },
+    {
+      path: "dashboard/analytics",  // ✅ /seller/dashboard/analytics
+      name: "SellerAnalytics",
+      component: () => import("@/views/seller/Analytics.vue"),
+      meta: { title: "Analytics & Reports" },
+    },
+    {
+      path: "dashboard/wallet",  // ✅ /seller/dashboard/wallet
+      name: "SellerWallet",
+      component: () => import("@/views/seller/Wallet.vue"),
+      meta: { title: "Seller Wallet" },
+    },
+    {
+      path: "dashboard/profile",  // ✅ /seller/dashboard/profile
+      name: "SellerProfile",
+      component: () => import("@/views/seller/Profile.vue"),
+      meta: { title: "Seller Profile" },
+    },
+    {
+      path: "dashboard/settings",  // ✅ /seller/dashboard/settings
+      name: "SellerSettings",
+      component: () => import("@/views/seller/Settings.vue"),
+      meta: { title: "Settings" },
+    },
+  ],
+},
 
   // ========================================
   // 404 NOT FOUND

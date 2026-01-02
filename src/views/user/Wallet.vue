@@ -438,8 +438,6 @@ const confirmPin = ref("");
 const pinError = ref("");
 const currentPin = ref("");
 const canChangePin = computed(() => {
-
-
   if (pinStatus.value.isSet) {
     // Jika sudah punya PIN, butuh semua 3 field
     const isValid =
@@ -555,7 +553,7 @@ const handlePinKeydown = event => {
   }
 };
 
-const validatePinInput = (event) => {
+const validatePinInput = event => {
   pinError.value = "";
   // Only allow numbers
   currentPin.value = currentPin.value.replace(/\D/g, "");
@@ -739,7 +737,18 @@ watch(searchQuery, newQuery => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  await loadWalletData();
+  console.log("💰 Wallet page mounted");
+  
+  try {
+    // ✅ Single initialization call
+    await initializeWallet({
+      autoRefresh: false,
+      fetchStats: true,
+    });
+    console.log("💰 Wallet initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize wallet:", error);
+  }
 });
 
 onUnmounted(() => {

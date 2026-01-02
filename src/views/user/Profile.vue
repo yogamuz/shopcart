@@ -236,16 +236,15 @@
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
             </div>
           </div>
 
-          <div class="flex justify-end mt-6">
+          <div class="mt-6 flex justify-end">
             <button
               type="submit"
-              :disabled="loading || isUploading || !isFormValid"
-              class="px-6 py-2 bg-[#6C5CE7] text-white text-sm font-medium rounded-lg hover:bg-[#5B4FD7] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="loading || !isFormValid"
+              class="px-6 py-2 bg-[#6C5CE7] text-white rounded-lg hover:bg-[#5B4FD7] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {{ loading ? "Saving..." : "Save Changes" }}
             </button>
@@ -254,60 +253,20 @@
       </div>
     </div>
 
-    <!-- Primary Address Overview -->
-    <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200">
+    <!-- Addresses Section -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
       <div class="p-6 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Primary Address</h3>
-            <p class="text-sm text-gray-500 mt-1">Your default shipping address</p>
+            <h3 class="text-lg font-semibold text-gray-900">Saved Addresses</h3>
+            <p class="text-sm text-gray-500 mt-1">Manage your delivery addresses</p>
           </div>
-          <button
-            @click="$emit('navigate-to', 'Addresses')"
-            class="text-sm font-medium text-[#6C5CE7] hover:text-[#5B4FD7] hover:underline"
-          >
-            Manage All Addresses
-          </button>
         </div>
       </div>
 
       <div class="p-6">
-        <div v-if="defaultAddress" class="flex items-start space-x-4">
-          <!-- Icon berdasarkan label -->
-          <div
-            :class="[
-              'w-10 h-10 rounded-lg flex items-center justify-center',
-              getAddressTypeColor(defaultAddress.label),
-            ]"
-          >
-            <component :is="getAddressIcon(defaultAddress.label)" class="w-5 h-5 text-white" />
-          </div>
-
-          <div class="flex-1">
-            <!-- Name (custom name) atau fallback ke label -->
-            <p class="font-medium text-gray-900">
-              {{ defaultAddress.name || defaultAddress.label || "Primary Address" }}
-            </p>
-
-            <!-- Label badge -->
-            <div class="flex items-center gap-2 mt-1">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                {{ defaultAddress.label }}
-              </span>
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
-              >
-                Default
-              </span>
-            </div>
-
-            <!-- Full address -->
-            <p class="text-sm text-gray-600 mt-2">{{ formatAddress(defaultAddress) }}</p>
-          </div>
-        </div>
-
-        <div v-else class="text-center py-4">
-          <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="addresses.length === 0" class="text-center py-8">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -315,67 +274,83 @@
               d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
             />
           </svg>
-          <p class="text-sm text-gray-500 mb-2">No primary address set</p>
-          <button
-            @click="$emit('navigate-to', 'Addresses')"
-            class="text-sm font-medium text-[#6C5CE7] hover:text-[#5B4FD7] hover:underline"
+          <p class="text-gray-500">No addresses saved yet</p>
+          <p class="text-sm text-gray-400 mt-1">Add an address to make checkout faster</p>
+        </div>
+
+        <div v-else class="space-y-4">
+          <div
+            v-for="(address, index) in addresses.slice(0, 2)"
+            :key="index"
+            class="flex items-start p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
           >
-            Add Address
-          </button>
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              :class="getAddressTypeColor(address.label)"
+            >
+              <component :is="getAddressIcon(address.label)" class="w-5 h-5 text-white" />
+            </div>
+            <div class="ml-4 flex-1">
+              <div class="flex items-center justify-between">
+                <h4 class="font-medium text-gray-900 capitalize">{{ address.label }}</h4>
+                <span v-if="address.isDefault" class="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+                  Default
+                </span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1">{{ formatAddress(address) }}</p>
+            </div>
+          </div>
+          <p v-if="addresses.length > 2" class="text-sm text-gray-500 text-center mt-4">
+            + {{ addresses.length - 2 }} more addresses
+          </p>
         </div>
       </div>
     </div>
-  </div>
-  <!-- Confirm Remove Avatar Modal -->
-  <ConfirmModalProfile
-    v-model="showRemoveConfirm"
-    title="Delete Photo"
-    confirm-text="Remove"
-    cancel-text="Cancel"
-    @confirm="confirmRemoveAvatar"
-    @cancel="cancelRemoveAvatar"
-  />
 
-  <!-- Avatar Crop Modal -->
-  <AvatarCropModal
-    v-model="showCropModal"
-    :image-src="tempImageSrc"
-    :file-name="tempFileName"
-    @crop="handleCropComplete"
-    @cancel="handleCropCancel"
-  />
+    <!-- ✅ Avatar Crop Modal (dengan props yang benar) -->
+    <AvatarCropModal
+      v-model="showCropModal"
+      :image-src="tempImageSrc"
+      :file-name="tempFileName"
+      @crop="handleCropComplete"
+      @cancel="handleCropCancel"
+    />
+
+    <!-- ✅ Remove Avatar Confirmation Modal (dengan ConfirmModalProfile) -->
+    <ConfirmModalProfile
+      v-model="showRemoveConfirm"
+      title="Remove Avatar"
+      message="Are you sure you want to remove your profile picture?"
+      confirm-text="Remove"
+      cancel-text="Cancel"
+      @confirm="confirmRemoveAvatar"
+      @cancel="cancelRemoveAvatar"
+    />
+  </div>
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from "vue";
-import { useUserProfileStore } from "@/stores/userProfileStore";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
-import { useUserQueries } from "@/composables/useUserQueries";
+import { useUserProfileStore } from "@/stores/userProfileStore";
 import { Home, Building2, MapPin, Upload } from "lucide-vue-next";
-import ConfirmModalProfile from "@/components/User/ConfirmModalProfile.vue";
+// ✅ Import komponen yang benar
 import AvatarCropModal from "@/components/User/AvatarCropModal.vue";
+import ConfirmModalProfile from "@/components/User/ConfirmModalProfile.vue";
 
-// Stores & Composables
-const userProfileStore = useUserProfileStore();
+const router = useRouter();
 const authStore = useAuthStore();
-const { useProfileQuery, useAddressesQuery, queryClient } = useUserQueries();
+const userProfileStore = useUserProfileStore();
 
-// Queries
-const {
-  data: profileData,
-  isLoading: isLoadingProfile,
-  error: profileQueryError,
-  refetch: refetchProfile,
-} = useProfileQuery();
+// ========== REFS ==========
+const fileInput = ref(null);
+const showAvatarMenu = ref(false);
+const showCropModal = ref(false);
+const showRemoveConfirm = ref(false);
+const tempImageSrc = ref("");
+const tempFileName = ref("");
 
-const {
-  data: addressesData,
-  isLoading: isLoadingAddresses,
-  error: addressesQueryError,
-  refetch: refetchAddresses,
-} = useAddressesQuery();
-
-// Local reactive state
 const profileForm = ref({
   firstName: "",
   lastName: "",
@@ -384,23 +359,15 @@ const profileForm = ref({
   gender: "",
 });
 
-const showAvatarMenu = ref(false);
-const showRemoveConfirm = ref(false);
-const fileInput = ref(null);
-const showCropModal = ref(false);
-const tempImageSrc = ref("");
-const tempFileName = ref("");
-
-// Computed from queries
-const profile = computed(() => profileData.value?.profile || null);
-const addresses = computed(() => addressesData.value || []);
-const loading = computed(() => isLoadingProfile.value || userProfileStore.loading);
-const error = computed(() => userProfileStore.error || profileQueryError.value?.message || null);
-const hasProfile = computed(() => !!profile.value);
-const uploadProgress = computed(() => userProfileStore.uploadProgress);
+// ========== COMPUTED ==========
+const profile = computed(() => userProfileStore.profile);
+const addresses = computed(() => userProfileStore.addresses);
+const loading = computed(() => userProfileStore.loading);
+const error = computed(() => userProfileStore.error);
+const hasProfile = computed(() => userProfileStore.hasProfile);
 const isUploading = computed(() => userProfileStore.isUploading);
+const uploadProgress = computed(() => userProfileStore.uploadProgress);
 
-// User info
 const userEmail = computed(() => authStore.user?.email || "");
 const profileDisplayName = computed(() => userProfileStore.fullName);
 const profileInitials = computed(() => userProfileStore.initials);
@@ -417,7 +384,7 @@ const profileCompleteness = computed(() => {
   return userProfileStore.profileCompleteness;
 });
 
-// Methods
+// ========== METHODS ==========
 const clearError = () => {
   userProfileStore.clearError();
 };
@@ -429,9 +396,7 @@ const handleSaveProfile = async () => {
     } else {
       await userProfileStore.createProfile(profileForm.value);
     }
-
-    await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
-    await refetchProfile();
+    // Data sudah otomatis ter-update di store
   } catch (err) {
     console.error("Error saving profile:", err);
   }
@@ -455,9 +420,9 @@ const handleRemoveAvatar = () => {
 
 const confirmRemoveAvatar = async () => {
   try {
-    await userProfileStore.removeAvatar(queryClient);
-    await refetchProfile();
+    await userProfileStore.removeAvatar();
     showRemoveConfirm.value = false;
+    // Data sudah otomatis ter-update di store
   } catch (err) {
     console.error("Error removing avatar:", err);
   }
@@ -500,10 +465,10 @@ const handleFileUpload = event => {
 
 const handleCropComplete = async croppedFile => {
   try {
-    await userProfileStore.uploadAvatar(croppedFile, queryClient);
-    await refetchProfile();
+    await userProfileStore.uploadAvatar(croppedFile);
     showCropModal.value = false;
     tempImageSrc.value = "";
+    // Data sudah otomatis ter-update di store
   } catch (err) {
     console.error("Error uploading cropped avatar:", err);
   }
@@ -547,41 +512,67 @@ const handleClickOutside = event => {
   }
 };
 
-onMounted(() => {
+// ✅ PERBAIKAN: Fungsi untuk load data
+const loadProfileData = async () => {
+  try {
+    console.log("👤 Loading profile data...");
+    
+    // ✅ Fetch profile jika belum ada atau force refresh
+    if (!userProfileStore.profile) {
+      await userProfileStore.fetchProfile(false);
+    }
+
+    // ✅ Fetch addresses jika belum ada
+    if (userProfileStore.addresses.length === 0) {
+      await userProfileStore.fetchAddresses(false);
+    }
+  } catch (err) {
+    console.error("❌ Error loading profile data:", err);
+  }
+};
+
+// ========== LIFECYCLE ==========
+onMounted(async () => {
+  console.log("🔄 Profile component mounted");
   document.addEventListener("click", handleClickOutside);
+  
+  // ✅ Load data saat component mounted
+  await loadProfileData();
 });
 
 onUnmounted(() => {
+  console.log("👋 Profile component unmounted");
   document.removeEventListener("click", handleClickOutside);
 });
 
+// ✅ PERBAIKAN: Watch route changes untuk reload data
 watch(
-  () => profile.value,
+  () => router.currentRoute.value.name,
+  async (newRouteName) => {
+    if (newRouteName === "UserProfile") {
+      console.log("👤 Profile page visited via route change");
+      await loadProfileData();
+    }
+  },
+  { immediate: false } // ✅ Tidak immediate karena sudah di-handle di onMounted
+);
+
+// Watch profile changes untuk update form
+watch(
+  () => userProfileStore.profile,
   newProfile => {
     if (newProfile) {
+      console.log("📝 Updating profile form with new data");
       profileForm.value = {
         firstName: newProfile.firstName || "",
         lastName: newProfile.lastName || "",
         phone: newProfile.phone || "",
-        // ✅ PERBAIKAN: Parse date dengan benar
         dateOfBirth: newProfile.dateOfBirth ? new Date(newProfile.dateOfBirth).toISOString().split("T")[0] : "",
         gender: newProfile.gender || "",
       };
-
     }
   },
   { immediate: true, deep: true }
-);
-
-// Sync addresses to store when query updates
-watch(
-  () => addressesData.value,
-  newAddresses => {
-    if (newAddresses) {
-      userProfileStore.addresses = newAddresses;
-    }
-  },
-  { immediate: true }
 );
 </script>
 

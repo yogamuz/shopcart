@@ -44,7 +44,7 @@ export const setupRouterGuards = router => {
       if (!authStore.isAuthenticated) {
         console.warn("❌ Not authenticated, redirecting to login");
         return next({
-          path: "/login",
+          path: "/",
           query: to.path !== "/" ? { redirect: to.fullPath } : {},
         });
       }
@@ -75,6 +75,21 @@ export const setupRouterGuards = router => {
           console.warn("Failed to fetch seller profile:", err);
         }
       }
+      // ✅ TAMBAHAN: Auto-fetch user profile when entering user dashboard routes
+      if (authStore.userRole === "user" && to.path.startsWith("/dashboard")) {
+        try {
+          const { useUserProfileStore } = await import("@/stores/userProfileStore");
+          const userProfileStore = useUserProfileStore();
+
+          // Force fetch jika belum ada data
+          if (!userProfileStore.profile) {
+            console.log("🔄 Auto-fetching user profile on dashboard entry...");
+            await userProfileStore.fetchProfile(true);
+          }
+        } catch (err) {
+          console.warn("Failed to fetch user profile:", err);
+        }
+      }
     }
 
     next();
@@ -90,6 +105,19 @@ export const setupRouterGuards = router => {
         sellerProfileStore.clearProfile();
       } catch (err) {
         console.warn("Failed to clear seller profile:", err);
+      }
+    }
+    if (from.path?.startsWith("/dashboard") && !to.path.startsWith("/dashboard")) {
+      try {
+        import("@/stores/userProfileStore").then(({ useUserProfileStore }) => {
+          const userProfileStore = useUserProfileStore();
+          // Optional: hanya clear jika logout, biarkan cache jika hanya navigasi
+          if (!authStore.isAuthenticated) {
+            userProfileStore.clearProfile();
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to clear user profile:", err);
       }
     }
   });

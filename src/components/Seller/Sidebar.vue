@@ -45,11 +45,7 @@
     <!-- Navigation -->
     <nav class="mt-8 flex-1 overflow-y-auto">
       <div v-for="item in navItems" :key="item.name" class="px-3 mb-1">
-        <router-link
-          :to="item.route"
-          v-slot="{ isActive }"
-          custom
-        >
+        <router-link :to="item.route" v-slot="{ isActive }" custom>
           <div
             @click="() => $router.push(item.route)"
             :class="[
@@ -99,17 +95,15 @@
         </router-link>
       </div>
 
+      <!-- Logout Button -->
       <div class="p-3 pt-0">
         <button
           @click="handleLogout"
           :disabled="isLoggingOut"
           class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full disabled:opacity-50"
         >
-          <component
-            :is="LogOut"
-            class="w-5 h-5 flex-shrink-0"
-            :class="[collapsed ? '' : 'mr-3', isLoggingOut ? 'animate-spin' : '']"
-          />
+          <!-- ✅ PERBAIKAN: Hapus animate-spin -->
+          <component :is="LogOut" class="w-5 h-5 flex-shrink-0" :class="collapsed ? '' : 'mr-3'" />
           <span v-if="!collapsed">{{ isLoggingOut ? "Logging out..." : "Logout" }}</span>
         </button>
       </div>
@@ -147,12 +141,12 @@ const isLoggingOut = ref(false);
 
 const navItems = ref([
   { name: "Dashboard", icon: LayoutDashboard, route: "/seller/dashboard" },
-  { name: "Products", icon: Package, route: "/seller/products" },
-  { name: "Orders", icon: ShoppingCart, route: "/seller/orders" },
-  { name: "Analytics", icon: BarChart3, route: "/seller/analytics" },
-  { name: "Wallet", icon: Wallet, route: "/seller/wallet" },
-  { name: "Profile", icon: UserCircle, route: "/seller/profile" },
-  { name: "Settings", icon: Settings, route: "/seller/settings" },
+  { name: "Products", icon: Package, route: "/seller/dashboard/products" },
+  { name: "Orders", icon: ShoppingCart, route: "/seller/dashboard/orders" },
+  { name: "Analytics", icon: BarChart3, route: "/seller/dashboard/analytics" },
+  { name: "Wallet", icon: Wallet, route: "/seller/dashboard/wallet" },
+  { name: "Profile", icon: UserCircle, route: "/seller/dashboard/profile" },
+  { name: "Settings", icon: Settings, route: "/seller/dashboard/settings" },
 ]);
 
 const handleLogout = async () => {

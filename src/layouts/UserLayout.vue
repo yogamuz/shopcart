@@ -1,13 +1,11 @@
-<!-- UserDashboard.vue - Main Component with Separated Components -->
+<!-- layouts/UserLayout.vue - Main User Dashboard Layout -->
 <template>
-  <!-- Main Dashboard Container -->
   <div class="min-h-screen bg-[#FAFBFD] font-inter">
     <!-- Left Sidebar -->
     <Sidebar
       :collapsed="sidebarCollapsed"
       :is-mobile="isMobile"
-      :active-nav="activeNav"
-      @nav-clicked="handleNavClick"
+      :active-nav="currentRouteName"
       @toggle-sidebar="toggleSidebar"
     />
 
@@ -15,75 +13,67 @@
     <div
       :class="[
         'transition-all duration-300',
-        // Mobile & Tablet: no margin (overlay sidebar)
         'ml-0',
-        // Desktop only: margin sesuai lebar sidebar
         sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-64',
       ]"
     >
       <!-- Header with Dynamic Title -->
-      <Header
-        :title="getPageTitle()"
-        @toggle-sidebar="toggleSidebar"
-      />
+      <Header :title="getPageTitle()" @toggle-sidebar="toggleSidebar" />
 
       <!-- Dashboard Content -->
       <main class="p-3 sm:p-4 lg:p-6">
-        <!-- Dashboard Overview -->
-        <UserDashboardOverview v-if="activeNav === 'Dashboard'" @navigate-to="handleNavClick" />
-
-        <!-- Profile Management -->
-        <UserProfile v-else-if="activeNav === 'Profile'" @navigate-to="handleNavClick" />
-
-        <!-- Addresses Management -->
-        <UserAddresses v-else-if="activeNav === 'Addresses'" />
-
-        <!-- Wallet Management -->
-        <UserWallet v-else-if="activeNav === 'Wallet'" />
-
-        <!-- Settings Management -->
-        <UserSettings v-else-if="activeNav === 'Settings'" />
+        <!-- ✅ RouterView untuk render child routes -->
+        <RouterView v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </RouterView>
       </main>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import { useRouter } from "vue-router";
+  
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/authStore";
 import Sidebar from "@/components/User/Sidebar.vue";
 import Header from "@/components/User/UserDashboardHeader.vue";
-import UserDashboardOverview from "@/components/User/UserDashboardOverview.vue";
-import UserProfile from "@/components/User/UserProfile.vue";
-import UserAddresses from "@/components/User/UserAddresses.vue";
-import UserWallet from "@/components/User/UserWallet.vue";
-import UserSettings from "@/components/User/UserSettings.vue";
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
-// Reactive state with responsive detection
+// Reactive state
 const sidebarCollapsed = ref(false);
 const isMobile = ref(false);
-const activeNav = ref("Dashboard");
 const isLoading = ref(true);
 
-// ✅ Route protection - wait for token ready
+// ✅ Computed current route name for sidebar highlighting
+const currentRouteName = computed(() => {
+  const routeNameMap = {
+    UserDashboard: "Dashboard",
+    UserProfile: "Profile",
+    UserAddresses: "Addresses",
+    UserWallet: "Wallet",
+    UserSettings: "Settings",
+  };
+  return routeNameMap[route.name] || "Dashboard";
+});
+
+// ✅ Route protection - check authentication
 onMounted(async () => {
   try {
-    // Wait for token to be ready (max 5 seconds)
-    const hasToken = await authStore.ensureTokenReady(5000);
-    
-    if (!hasToken || !authStore.isAuthenticated) {
+    if (!authStore.isAuthenticated) {
       console.warn("⚠️ User not authenticated, redirecting to login");
       await router.push("/login");
       return;
     }
-    
+
     console.log("✅ Dashboard access granted");
     isLoading.value = false;
-    
+
     // Responsive setup
     window.addEventListener("resize", handleResize);
     checkScreenSize();
@@ -100,7 +90,7 @@ onUnmounted(() => {
 // ✅ Watch for logout
 watch(
   () => authStore.isAuthenticated,
-  (newValue) => {
+  newValue => {
     if (!newValue) {
       console.warn("⚠️ Auth lost, redirecting to login");
       router.push("/login");
@@ -120,29 +110,21 @@ const handleResize = () => {
   checkScreenSize();
 };
 
-// Helper functions
+// ✅ Helper function untuk page title
 const getPageTitle = () => {
   const titles = {
-    Dashboard: "Dashboard Overview",
-    Profile: "Profile Management",
-    Addresses: "Address Management",
-    Wallet: "Wallet Management",
-    Settings: "Settings Management",
+    UserDashboard: "Dashboard Overview",
+    UserProfile: "Profile Management",
+    UserAddresses: "Address Management",
+    UserWallet: "Wallet Management",
+    UserSettings: "Settings Management",
   };
-  return titles[activeNav.value] || "Dashboard Overview";
+  return titles[route.name] || "Dashboard Overview";
 };
 
 // Methods
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
-};
-
-const handleNavClick = navName => {
-  if (activeNav.value === navName) return;
-  activeNav.value = navName;
-  if (isMobile.value) {
-    sidebarCollapsed.value = true;
-  }
 };
 </script>
 
@@ -153,14 +135,12 @@ const handleNavClick = navName => {
   font-family: "Inter", sans-serif;
 }
 
-/* Remove extra spacing */
 .min-h-screen {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
 }
 
-/* Fix main content spacing */
 main {
   margin-top: 0 !important;
   padding-top: 0.75rem !important;
@@ -178,46 +158,20 @@ main {
   }
 }
 
-/* Content sections responsive */
-.dashboard-content,
-.profile-content,
-.address-content,
-.wallet-content,
-.settings-content {
-  animation: fadeIn 0.3s ease-in-out;
-  max-width: 100%;
-  overflow-x: hidden;
-  margin-top: 0;
-  padding-top: 0;
+/* ✅ Transition animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
-/* Responsive layout fixes */
-@media (max-width: 1024px) {
-  .sidebar-collapsed {
-    transform: translateX(-100%);
-  }
-}
-
-/* Mobile optimizations */
-@media (max-width: 640px) {
-  .dashboard-content,
-  .profile-content,
-  .address-content,
-  .wallet-content,
-  .settings-content {
-    padding: 0;
-  }
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 /* Custom scrollbar */
@@ -257,7 +211,6 @@ button:active:not(:disabled) {
   transform: translateY(0);
 }
 
-/* Mobile button adjustments */
 @media (max-width: 640px) {
   button:hover:not(:disabled) {
     transform: none;

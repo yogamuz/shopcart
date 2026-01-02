@@ -1,4 +1,3 @@
-<!-- Sidebar.vue - Clean Design with Dashboard, Address, Wallet, Settings -->
 <template>
   <!-- Mobile Overlay -->
   <div
@@ -10,9 +9,7 @@
   <aside
     :class="[
       'fixed left-0 top-0 h-full bg-white border-r border-gray-200 transition-all duration-300 z-30 flex flex-col',
-      // Desktop: normal behavior - diperlebar dari w-20 ke w-24
       collapsed ? 'w-24' : 'w-64',
-      // Mobile: slide in/out
       'md:translate-x-0',
       isMobile && collapsed ? '-translate-x-full' : 'translate-x-0',
     ]"
@@ -49,33 +46,34 @@
     <!-- Navigation -->
     <nav class="mt-8 flex-1 overflow-y-auto">
       <div v-for="item in navItems" :key="item.name" class="px-3 mb-1">
-        <a
-          href="#"
+        <!-- ✅ Gunakan RouterLink untuk SPA navigation -->
+        <RouterLink
+          :to="item.route"
           :class="[
             'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors relative',
-            item.active ? 'bg-[#6C5CE7] text-white' : 'text-gray-700 hover:bg-gray-100',
+            isActive(item.name) ? 'bg-[#6C5CE7] text-white' : 'text-gray-700 hover:bg-gray-100',
           ]"
-          @click="handleNavClick(item.name)"
+          @click="handleNavClick"
         >
           <div class="flex items-center">
             <component :is="item.icon" class="w-5 h-5 mr-3" />
             <span v-if="!collapsed">{{ item.name }}</span>
           </div>
-        </a>
+        </RouterLink>
       </div>
     </nav>
+
     <!-- Bottom Section - Home & Logout -->
     <div class="border-t border-gray-100">
       <!-- Home Button -->
       <div class="p-3">
-        <a
-          href="#"
+        <RouterLink
+          to="/"
           class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors w-full"
-          @click="handleHomeClick"
         >
           <component :is="Home" class="w-5 h-5 flex-shrink-0" :class="collapsed ? '' : 'mr-3'" />
           <span v-if="!collapsed">Home</span>
-        </a>
+        </RouterLink>
       </div>
 
       <!-- Logout Button -->
@@ -85,10 +83,11 @@
           :disabled="isLoggingOut"
           class="flex items-center px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
         >
+          <!-- ✅ PERBAIKAN: Icon statis, tidak berputar -->
           <component
             :is="LogOut"
             class="w-5 h-5 flex-shrink-0"
-            :class="[collapsed ? '' : 'mr-3', isLoggingOut ? 'animate-spin' : '']"
+            :class="collapsed ? '' : 'mr-3'"
           />
           <span v-if="!collapsed">{{ isLoggingOut ? "Logging out..." : "Logout" }}</span>
         </button>
@@ -97,12 +96,12 @@
   </aside>
 </template>
 
-<!-- Di Sidebar.vue -->
 <script setup>
-import { ref, watch } from "vue";
+import { ref, computed } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { LayoutDashboard, User, MapPin, Wallet, Settings, Home, LogOut } from "lucide-vue-next";
-import { useAuth } from "@/composables/useAuth";
-import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/authStore";
+
 const props = defineProps({
   collapsed: {
     type: Boolean,
@@ -113,19 +112,60 @@ const props = defineProps({
     default: false,
   },
   activeNav: {
-    // TAMBAHKAN INI
     type: String,
     default: "Dashboard",
   },
 });
 
-const emit = defineEmits(["nav-clicked", "home-clicked", "toggle-sidebar"]);
+const emit = defineEmits(["toggle-sidebar"]);
 
-// ✨ TAMBAHKAN KODE INI
 const router = useRouter();
-const { logout } = useAuth();
+const route = useRoute();
+const { logout } = useAuthStore();
 const isLoggingOut = ref(false);
 
+// ✅ Navigation items dengan routes
+const navItems = ref([
+  {
+    name: "Dashboard",
+    icon: LayoutDashboard,
+    route: "/dashboard",
+  },
+  {
+    name: "Profile",
+    icon: User,
+    route: "/dashboard/profile",
+  },
+  {
+    name: "Addresses",
+    icon: MapPin,
+    route: "/dashboard/addresses",
+  },
+  {
+    name: "Wallet",
+    icon: Wallet,
+    route: "/dashboard/wallet",
+  },
+  {
+    name: "Settings",
+    icon: Settings,
+    route: "/dashboard/settings",
+  },
+]);
+
+// ✅ Check if route is active
+const isActive = (navName) => {
+  return props.activeNav === navName;
+};
+
+// ✅ Handle nav click - close sidebar on mobile
+const handleNavClick = () => {
+  if (props.isMobile) {
+    emit("toggle-sidebar");
+  }
+};
+
+// ✅ PERBAIKAN: Logout sama seperti seller sidebar
 const handleLogout = async () => {
   if (isLoggingOut.value) return;
 
@@ -134,77 +174,30 @@ const handleLogout = async () => {
 
     // Clear user profile/data before logout
     try {
-      const { queryClient } = await import("@/composables/useUserQueries");
-      await queryClient.clear();
+      const { useUserProfileStore } = await import("@/stores/userProfileStore");
+      const userProfileStore = useUserProfileStore();
+      userProfileStore.$reset();
       console.log("✅ User data cleared on logout");
     } catch (err) {
       console.warn("Failed to clear user data:", err);
     }
 
+    // ✅ Logout tanpa explicit router.push
     await logout();
-
-    // Navigate to login
-    await router.push("/login");
+    
+    // ✅ TAMBAHKAN: Explicit redirect ke homepage (sama seperti seller)
+    await router.push("/");
+    
+    console.log("✅ User logged out successfully");
   } catch (error) {
-    console.error("Logout error:", error);
+    console.error("❌ Logout error:", error);
   } finally {
     isLoggingOut.value = false;
   }
 };
+</script>
 
-// Updated navigation items
-const navItems = ref([
-  {
-    name: "Dashboard",
-    icon: LayoutDashboard,
-    active: true,
-  },
-  {
-    name: "Profile",
-    icon: User,
-    active: false,
-  },
-  {
-    name: "Addresses",
-    icon: MapPin,
-    active: false,
-  },
-  {
-    name: "Wallet",
-    icon: Wallet,
-    active: false,
-  },
-  {
-    name: "Settings",
-    icon: Settings,
-    active: false,
-  },
-]);
-
-// TAMBAHKAN INI: Watch activeNav prop untuk update highlight
-watch(
-  () => props.activeNav,
-  newNav => {
-    navItems.value.forEach(item => {
-      item.active = item.name === newNav;
-    });
-  },
-  { immediate: true }
-);
-
-const handleHomeClick = () => {
-  if (window.$router) {
-    window.$router.push("/");
-  } else {
-    window.location.href = "/";
-  }
-};
-
-const handleNavClick = navName => {
-  // Emit ke parent, biarkan parent yang update activeNav
-  emit("nav-clicked", navName);
-};
-</script><style scoped>
+<style scoped>
 /* Smooth transitions */
 aside {
   transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
@@ -224,7 +217,6 @@ nav::-webkit-scrollbar-thumb {
   border-radius: 1px;
 }
 
-/* ✨ TAMBAHKAN INI */
 /* Logout button hover effect */
 button:hover:not(:disabled) {
   transform: translateX(2px);
@@ -234,17 +226,8 @@ button:active:not(:disabled) {
   transform: translateX(0);
 }
 
-/* Spin animation for logout icon */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
+/* ✅ RouterLink active state */
+a.router-link-active {
+  /* Handled by isActive computed */
 }
 </style>

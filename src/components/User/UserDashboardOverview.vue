@@ -40,7 +40,7 @@
         <div class="absolute inset-0 opacity-20">
           <div class="star-field"></div>
         </div>
-        
+
         <!-- Floating Circles -->
         <div class="floating-circle circle-1"></div>
         <div class="floating-circle circle-2"></div>
@@ -55,13 +55,11 @@
                 <span class="text-2xl animate-bounce-slow">🚀</span>
                 <span class="text-sm font-semibold text-white">Limited Time Opportunity</span>
               </div>
-              
-              <h3 class="text-2xl md:text-3xl font-bold text-white leading-tight">
-                Ready to Become a Seller?
-              </h3>
-              
+
+              <h3 class="text-2xl md:text-3xl font-bold text-white leading-tight">Ready to Become a Seller?</h3>
+
               <p class="text-purple-100 text-sm md:text-base max-w-xl">
-                Join thousands of successful sellers and start your own online business today. 
+                Join thousands of successful sellers and start your own online business today.
                 <span class="font-semibold text-white">Reach millions of customers worldwide!</span>
               </p>
 
@@ -69,19 +67,31 @@
               <div class="flex flex-wrap gap-3 pt-2">
                 <div class="flex items-center gap-2 text-white/90 text-sm">
                   <svg class="w-5 h-5 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>No Setup Fees</span>
                 </div>
                 <div class="flex items-center gap-2 text-white/90 text-sm">
                   <svg class="w-5 h-5 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>Easy Dashboard</span>
                 </div>
                 <div class="flex items-center gap-2 text-white/90 text-sm">
                   <svg class="w-5 h-5 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>24/7 Support</span>
                 </div>
@@ -100,9 +110,7 @@
                   <div class="circle"></div>
                 </div>
               </button>
-              <p class="text-white/70 text-xs text-center mt-3">
-                ✨ Join now and get premium features
-              </p>
+              <p class="text-white/70 text-xs text-center mt-3">✨ Join now and get premium features</p>
             </div>
           </div>
         </div>
@@ -352,25 +360,19 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useAuthStore } from "@/stores/authStore";
-import { useUserQueries } from "@/composables/useUserQueries";
 import { useWallet } from "@/composables/useWallet";
 import { useOrderStore } from "@/stores/orderStore";
+import { useUserProfileStore } from "@/stores/userProfileStore";
 import BecomeSellerModal from "@/components/User/BecomeSellerModal.vue";
 
 const emit = defineEmits(["navigate-to"]);
 
 const authStore = useAuthStore();
 const orderStore = useOrderStore();
-const { useProfileQuery, useAddressesQuery } = useUserQueries();
-
-// Queries
-const { data: profileData } = useProfileQuery();
-const { data: addressesData } = useAddressesQuery();
-
+const userProfileStore = useUserProfileStore();
 // Wallet composable dengan auto-refresh
 const {
   balance,
@@ -382,8 +384,8 @@ const {
 } = useWallet();
 
 // Computed
-const profile = computed(() => profileData.value?.profile);
-const addresses = computed(() => addressesData.value || []);
+const profile = computed(() => userProfileStore.profile);
+const addresses = computed(() => userProfileStore.addresses);
 const showSellerModal = ref(false);
 
 const canUpgradeToSeller = computed(() => {
@@ -397,7 +399,7 @@ const displayName = computed(() => {
   return authStore.user?.username || "User";
 });
 
-const handleSellerUpgradeSuccess = (data) => {
+const handleSellerUpgradeSuccess = data => {
   // Toast notification handler
 };
 
@@ -487,7 +489,23 @@ const loadDashboardData = async () => {
   }
 };
 
+// ✅ Lifecycle - Fixed onUnmounted
+// ✅ Lifecycle - Optimized with cache
 onMounted(async () => {
+  console.log("🏠 Dashboard mounted, loading data...");
+  
+  // ✅ Fetch profile & addresses HANYA jika belum ada (gunakan cache)
+  if (!userProfileStore.profile) {
+    console.log("🔄 Fetching profile...");
+    await userProfileStore.fetchProfile(false); // ✅ false = use cache
+  }
+  
+  if (userProfileStore.addresses.length === 0) {
+    console.log("🔄 Fetching addresses...");
+    await userProfileStore.fetchAddresses(false); // ✅ false = use cache
+  }
+  
+  // Load wallet & orders
   await loadDashboardData();
   startAutoRefresh(30000);
 });
@@ -523,10 +541,8 @@ onBeforeUnmount(() => {
   position: absolute;
   width: 200%;
   height: 200%;
-  background-image: 
-    radial-gradient(2px 2px at 20px 30px, white, transparent),
-    radial-gradient(2px 2px at 60px 70px, white, transparent),
-    radial-gradient(1px 1px at 50px 50px, white, transparent),
+  background-image: radial-gradient(2px 2px at 20px 30px, white, transparent),
+    radial-gradient(2px 2px at 60px 70px, white, transparent), radial-gradient(1px 1px at 50px 50px, white, transparent),
     radial-gradient(1px 1px at 130px 80px, white, transparent),
     radial-gradient(2px 2px at 90px 10px, white, transparent);
   background-size: 200px 200px;
@@ -575,7 +591,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {
@@ -585,7 +602,8 @@ onBeforeUnmount(() => {
 
 /* Bounce Animation for Emoji */
 @keyframes bounce-slow {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -612,13 +630,7 @@ onBeforeUnmount(() => {
   animation: gradient_301 5s ease infinite;
   border: double 4px transparent;
   background-image: linear-gradient(#212121, #212121),
-    linear-gradient(
-      137.48deg,
-      #ffdb3b 10%,
-      #fe53bb 45%,
-      #8f51ea 67%,
-      #0044ff 87%
-    );
+    linear-gradient(137.48deg, #ffdb3b 10%, #fe53bb 45%, #8f51ea 67%, #0044ff 87%);
   background-origin: border-box;
   background-clip: content-box, border-box;
   position: relative;
